@@ -1,0 +1,142 @@
+syntax = "proto3";
+
+option go_package = "Ass/AllServices";
+
+package AllServices;
+
+//----------  Update  -----------//
+message UpdateRequest {
+}
+message UpdateResponse {
+    int32 port_num = 1;
+    string data_node_ip = 2;
+}
+service UpdateService {
+    rpc Upload(UpdateRequest) returns (UpdateResponse);
+}
+
+//----------  Download  -----------//
+//from client to master -m.s
+message DownloadRequest {
+    string file_name = 1;
+}
+message DownloadResponse {
+    repeated int32 machine_node = 1; //<=? list!!
+}
+service DownloadService {
+    rpc DownloadReq(DownloadRequest) returns (DownloadResponse);
+}
+
+//----------  Download File  -----------//
+message DownloadFileRequest {
+    string file_name = 1;
+}
+message DownloadFileResponse {
+    bytes file = 1;
+}
+service DownloadFileService {
+    rpc DownloadFile(DownloadFileRequest) returns (DownloadFileResponse);
+}
+
+//----------  Upload File  -----------//
+//from client to machine : for uploading process (m.s)
+message UploadFileRequest {
+    bytes file = 1;
+}
+// later: if there is a respose from the machine to client or the client will take the response from master only(valid to send empty response??)  
+message UploadFileResponse {
+}
+service UploadFileService {
+    rpc UploadFile(UploadFileRequest) returns (UploadFileResponse);
+}
+
+//----------  Notify Machine  -----------//
+message notifyMachineDataTransferRequest {
+    int32 source_id = 1;
+} 
+message notifyMachineDataTransferResponse {
+} 
+service NotifyMachineDataTransferService {
+    rpc NotifyMachineDataTransfer(notifyMachineDataTransferRequest) returns (notifyMachineDataTransferResponse);
+}
+
+//----------  Transfer File  -----------//
+//from machine to machine -m.s
+message TransferFileUploadRequest {
+    bytes file = 1;
+}
+message TransferFileUploadResponse {
+}
+service TransferFileService {
+    rpc TransferFile(TransferFileUploadRequest) returns (TransferFileUploadResponse);
+}
+
+//----------  Alive  -----------//
+//from mashine to master 
+//? wla n el master to machine ??
+message AliveRequest {
+    int32 keeper_id = 1;
+}
+
+message AliveResponse {
+}
+
+service AliveService {
+    rpc Alive(AliveRequest) returns (AliveResponse);
+}
+
+
+//----------  Existance for Replication   -----------//
+//from master to mashine
+
+message RepExstRequest {
+    //??  
+}
+
+message RepExstResponse {
+    //? m7taga a2ol ll master 7aga ?
+}
+
+service RepExstService {
+    rpc RepExst(RepExstRequest) returns (RepExstResponse);
+}
+
+//----------  Keeper Done (step5)  -----------//
+//from mashine to master
+message KeeperDoneRequest {
+    string file_name = 1;
+    int32 file_size = 2;
+
+    int32 port_num = 3;
+    int32 keeper_id = 4;  //later: if you could know from the established connection's ip(el conection ely el keeper hy3mlo 34an yklm el master -m.s) who is the keeper, ypu can delete it -m.s
+
+    //later + important : 
+    // i think we need the id of the machine as there maybe multiple users distrubuted on machine keepers,
+    // so i want to know which machine finish to notify which user
+    //? but how to get the id of the user ?
+    //? if we will now him from the port he connected to master by it , tb ma n4el el keeper_id kman w nm4y bnfs el mbda?!!
+    
+    
+}
+
+message KeeperDoneResponse {  
+}
+
+service KeeperDoneService {
+    rpc KeeperDone(KeeperDoneRequest) returns (KeeperDoneResponse);
+}
+
+//----------  Master Done Uploading  -----------//
+//from master to client 
+//? is the master really send the req to client ? y3ny el client hwa ely hyb3t req fady w ystna el master yrd b el step(6) "success"?
+
+message DoneUptRequest {
+}
+
+message DoneUpResponse {
+    //? m7taga a2ol ll master 7aga ?
+}
+
+service DoneUpService {
+    rpc DoneUp(DoneUptRequest) returns (DoneUpResponse);
+}
