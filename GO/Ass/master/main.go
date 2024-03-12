@@ -52,29 +52,47 @@ func (s *KeeperDoneServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReq
 // later: is there is one client at a time to the master? wla el master laz ykon 3ndha multiple ports 34an ykon fe kza client?
 func main() {
 	lis, err := net.Listen("tcp", ":8080")
-if err != nil {
-    fmt.Println("failed to listen:", err)
-    return
-}
+	if err != nil {
+		fmt.Println("failed to listen:", err)
+		return
+	}
 
-s := grpc.NewServer()
-pb.RegisterUpdateServiceServer(s, &UploadServer{})
-fmt.Println("Server started. Listening on port 8080...")
-if err := s.Serve(lis); err != nil {
-    fmt.Println("failed to serve:", err)
-}
+	s := grpc.NewServer()
+	pb.RegisterUpdateServiceServer(s, &UploadServer{})
 
-fmt.Println("Server started. again")
-// lisKeeper, err := net.Listen("tcp", ":8081")
-// if err != nil {
-//     fmt.Println("failed to listen:", err)
-//     return
-// }
+	// Create a channel to signal when the server is done
+	done := make(chan bool)
 
-// sKeeper := grpc.NewServer()
-// pb.RegisterKeeperDoneServiceServer(sKeeper, &KeeperDoneServer{})
-// fmt.Println("Keeper server started. Listening on port 8081...")
-// if err := sKeeper.Serve(lisKeeper); err != nil {
-//     fmt.Println("failed to serve:", err)
-// }
+	// Start the gRPC server in a separate Goroutine
+	go func() {
+		fmt.Println("Keeper server started. Listening on port 8080...")
+		if err := s.Serve(lis); err != nil {
+			fmt.Println("failed to serve:", err)
+		}
+		done <- true // Signal that the server is done
+	}()
+
+
+
+	fmt.Println("Server started. again")
+	lisKeeper, err := net.Listen("tcp", ":8081")
+	if err != nil {
+	    fmt.Println("failed to listen:", err)
+	    return
+	}
+
+	sKeeper := grpc.NewServer()
+	pb.RegisterKeeperDoneServiceServer(sKeeper, &KeeperDoneServer{})
+	// Start the gRPC server in a separate Goroutine
+	go func() {
+		fmt.Println("Keeper server started. Listening on port 8081...")
+		if err := sKeeper.Serve(lisKeeper); err != nil {
+			fmt.Println("failed to serve:", err)
+		}
+		done <- true // Signal that the server is done
+	}()
+
+	
+	// Wait for the server to finish (optional)
+	<-done
 }
