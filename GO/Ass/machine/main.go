@@ -41,7 +41,7 @@ func main() {
 	// }
 
 	//------- act as client (client to master)  ------//
-	conn, err := grpc.Dial("localhost:8081", grpc.WithInsecure())
+	conn, err := grpc.Dial("localhost:8082", grpc.WithInsecure())
 	if err != nil {
 		fmt.Println("did not connect:", err)
 		return

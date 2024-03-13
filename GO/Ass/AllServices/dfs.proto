@@ -21,10 +21,12 @@ message DownloadRequest {
     string file_name = 1;
 }
 message DownloadResponse {
-    repeated int32 machine_node = 1; //<=? list!!
+    //repeated int32 machine_node = 1; //<=? list!! ://"list" is bonus for parellel downloading
+    int32 port_num = 1;
+    string data_node_ip = 2;
 }
 service DownloadService {
-    rpc DownloadReq(DownloadRequest) returns (DownloadResponse);
+    rpc Download(DownloadRequest) returns (DownloadResponse);
 }
 
 //----------  Download File  -----------//
