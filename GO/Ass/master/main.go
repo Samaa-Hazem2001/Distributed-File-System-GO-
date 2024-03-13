@@ -11,12 +11,13 @@ import (
 	"google.golang.org/grpc"
 )
 
-//----------  Update  -----------//
-type UploadServer struct {
-	pb.UnimplementedUpdateServiceServer
+/////////////-------------  client services (from master)  -------------///////////////
+type ClientServer struct {
+	pb.UnimplementedClientServiceServer
 }
 
-func (s *UploadServer) Upload(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {
+//----------  Update  -----------//
+func (s *ClientServer) Upload(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {
 	// text := req.GetText()
 	port := int32(8080) //later: change it to be an unbusy port
 	ipString := "ip_here" //later: change it to be the IP with the an unbusy machine
@@ -24,11 +25,7 @@ func (s *UploadServer) Upload(ctx context.Context, req *pb.UpdateRequest) (*pb.U
 }
 
 //----------  Download  -----------//
-type DownloadServer struct {
-	pb.UnimplementedDownloadServiceServer
-}
-
-func (s *DownloadServer) Download(ctx context.Context, req *pb.DownloadRequest) (*pb.DownloadResponse, error) {
+func (s *ClientServer) Download(ctx context.Context, req *pb.DownloadRequest) (*pb.DownloadResponse, error) {
 	//get fileName from the client
 	fileName := req.GetFileName()
 	//for debuging:-
@@ -38,8 +35,8 @@ func (s *DownloadServer) Download(ctx context.Context, req *pb.DownloadRequest) 
 	//later: search which mahine have this file
 
 	//send the port and ip to this machine to the client
-	port := int32(8080) //later: change it to be an unbusy port
-	ipString := "ip_here" //later: change it to be the IP with the an unbusy machine
+	port := int32(3000) //later: change it to be an unbusy port
+	ipString := "ip_down" //later: change it to be the IP with the an unbusy machine
 	return &pb.DownloadResponse{PortNum: port,DataNodeIp: ipString}, nil
 }
 
@@ -72,7 +69,7 @@ func (s *KeeperDoneServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReq
 //?: hwa el upload request and download request from the clients ,each one have to be in a sepearte ports?(the current assumption is yes)
 func main() {
 
-	//----------------  upload file   -------------//
+/////////////-------------  client services (from master)  -------------///////////////
 	lisUp, err := net.Listen("tcp", ":8080")
 	if err != nil {
 		fmt.Println("failed to listen:", err)
@@ -80,7 +77,7 @@ func main() {
 	}
 
 	sUp := grpc.NewServer()
-	pb.RegisterUpdateServiceServer(sUp, &UploadServer{})
+	pb.RegisterClientServiceServer(sUp, &ClientServer{})
 
 	// Create a channel to signal when the server is done
 	done := make(chan bool)
@@ -96,26 +93,8 @@ func main() {
 
 	// fmt.Println("Server started. again")
 
-	//----------------  download file   -------------//
-	lisDown, err := net.Listen("tcp", ":8081")
-	if err != nil {
-		fmt.Println("failed to listen:", err)
-		return
-	}
 
-	sDown := grpc.NewServer()
-	pb.RegisterDownloadServiceServer(sDown, &DownloadServer{})
-	// Start the gRPC server in a separate Goroutine
-	go func() {
-		fmt.Println("Keeper server started. Listening on port 8081...")
-		if err := sDown.Serve(lisDown); err != nil {
-			fmt.Println("failed to serve:", err)
-		}
-		done <- true // Signal that the server is done
-	}()
-
-
-	//----------------  machine done uploading file   -------------//
+	/////////////-------------  node keeper services (from master)  -------------///////////////
 	lisKeeper, err := net.Listen("tcp", ":8082")
 	if err != nil {
 	    fmt.Println("failed to listen:", err)

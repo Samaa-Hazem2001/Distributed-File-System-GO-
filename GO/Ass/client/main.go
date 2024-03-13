@@ -11,21 +11,22 @@ import (
 
 func main() {
 //later:assume that the client connection can be one upload or one download only
+	
 	// Read input from user
 	fmt.Print("For uploading enter '1' , for download enter '2': ")
 	var upORdown int
 	fmt.Scanln(&upORdown)
 	
+	conn, err := grpc.Dial("localhost:8080", grpc.WithInsecure())
+	if err != nil {
+		fmt.Println("did not connect:", err)
+		return
+	}
+	defer conn.Close()
+	c := pb.NewClientServiceClient(conn)
+
 	if(upORdown == 1 ) {
 		//---------  upload file request to master  ---------//
-		conn, err := grpc.Dial("localhost:8080", grpc.WithInsecure())
-		if err != nil {
-			fmt.Println("did not connect:", err)
-			return
-		}
-		defer conn.Close()
-		c := pb.NewUpdateServiceClient(conn)
-
 		// Call the RPC method
 		resp, err := c.Upload(context.Background(), &pb.UpdateRequest{})
 		if err != nil {
@@ -69,14 +70,6 @@ func main() {
 	}
 	if(upORdown == 2 ){ //later: change this to "else"
 		//---------  download file request to master  ---------//
-		connDownload, err := grpc.Dial("localhost:8081", grpc.WithInsecure())
-		if err != nil {
-			fmt.Println("did not connect:", err)
-			return
-		}
-		defer connDownload.Close()
-		c := pb.NewDownloadServiceClient(connDownload)
-
 		// Call the RPC method
 		resp, err := c.Download(context.Background(), &pb.DownloadRequest{FileName: "testfile_for_downloading"})
 		if err != nil {

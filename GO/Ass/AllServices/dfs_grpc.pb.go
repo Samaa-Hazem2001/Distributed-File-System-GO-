@@ -19,179 +19,126 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	UpdateService_Upload_FullMethodName = "/AllServices.UpdateService/Upload"
+	ClientService_Upload_FullMethodName   = "/AllServices.ClientService/Upload"
+	ClientService_Download_FullMethodName = "/AllServices.ClientService/Download"
 )
 
-// UpdateServiceClient is the client API for UpdateService service.
+// ClientServiceClient is the client API for ClientService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type UpdateServiceClient interface {
+type ClientServiceClient interface {
 	Upload(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*UpdateResponse, error)
+	Download(ctx context.Context, in *DownloadRequest, opts ...grpc.CallOption) (*DownloadResponse, error)
 }
 
-type updateServiceClient struct {
+type clientServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewUpdateServiceClient(cc grpc.ClientConnInterface) UpdateServiceClient {
-	return &updateServiceClient{cc}
+func NewClientServiceClient(cc grpc.ClientConnInterface) ClientServiceClient {
+	return &clientServiceClient{cc}
 }
 
-func (c *updateServiceClient) Upload(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*UpdateResponse, error) {
+func (c *clientServiceClient) Upload(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*UpdateResponse, error) {
 	out := new(UpdateResponse)
-	err := c.cc.Invoke(ctx, UpdateService_Upload_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, ClientService_Upload_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// UpdateServiceServer is the server API for UpdateService service.
-// All implementations must embed UnimplementedUpdateServiceServer
+func (c *clientServiceClient) Download(ctx context.Context, in *DownloadRequest, opts ...grpc.CallOption) (*DownloadResponse, error) {
+	out := new(DownloadResponse)
+	err := c.cc.Invoke(ctx, ClientService_Download_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ClientServiceServer is the server API for ClientService service.
+// All implementations must embed UnimplementedClientServiceServer
 // for forward compatibility
-type UpdateServiceServer interface {
+type ClientServiceServer interface {
 	Upload(context.Context, *UpdateRequest) (*UpdateResponse, error)
-	mustEmbedUnimplementedUpdateServiceServer()
+	Download(context.Context, *DownloadRequest) (*DownloadResponse, error)
+	mustEmbedUnimplementedClientServiceServer()
 }
 
-// UnimplementedUpdateServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedUpdateServiceServer struct {
+// UnimplementedClientServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedClientServiceServer struct {
 }
 
-func (UnimplementedUpdateServiceServer) Upload(context.Context, *UpdateRequest) (*UpdateResponse, error) {
+func (UnimplementedClientServiceServer) Upload(context.Context, *UpdateRequest) (*UpdateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Upload not implemented")
 }
-func (UnimplementedUpdateServiceServer) mustEmbedUnimplementedUpdateServiceServer() {}
+func (UnimplementedClientServiceServer) Download(context.Context, *DownloadRequest) (*DownloadResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Download not implemented")
+}
+func (UnimplementedClientServiceServer) mustEmbedUnimplementedClientServiceServer() {}
 
-// UnsafeUpdateServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to UpdateServiceServer will
+// UnsafeClientServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ClientServiceServer will
 // result in compilation errors.
-type UnsafeUpdateServiceServer interface {
-	mustEmbedUnimplementedUpdateServiceServer()
+type UnsafeClientServiceServer interface {
+	mustEmbedUnimplementedClientServiceServer()
 }
 
-func RegisterUpdateServiceServer(s grpc.ServiceRegistrar, srv UpdateServiceServer) {
-	s.RegisterService(&UpdateService_ServiceDesc, srv)
+func RegisterClientServiceServer(s grpc.ServiceRegistrar, srv ClientServiceServer) {
+	s.RegisterService(&ClientService_ServiceDesc, srv)
 }
 
-func _UpdateService_Upload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ClientService_Upload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UpdateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(UpdateServiceServer).Upload(ctx, in)
+		return srv.(ClientServiceServer).Upload(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: UpdateService_Upload_FullMethodName,
+		FullMethod: ClientService_Upload_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UpdateServiceServer).Upload(ctx, req.(*UpdateRequest))
+		return srv.(ClientServiceServer).Upload(ctx, req.(*UpdateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// UpdateService_ServiceDesc is the grpc.ServiceDesc for UpdateService service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var UpdateService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "AllServices.UpdateService",
-	HandlerType: (*UpdateServiceServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "Upload",
-			Handler:    _UpdateService_Upload_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "Ass/AllServices/dfs.proto",
-}
-
-const (
-	DownloadService_Download_FullMethodName = "/AllServices.DownloadService/Download"
-)
-
-// DownloadServiceClient is the client API for DownloadService service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type DownloadServiceClient interface {
-	Download(ctx context.Context, in *DownloadRequest, opts ...grpc.CallOption) (*DownloadResponse, error)
-}
-
-type downloadServiceClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewDownloadServiceClient(cc grpc.ClientConnInterface) DownloadServiceClient {
-	return &downloadServiceClient{cc}
-}
-
-func (c *downloadServiceClient) Download(ctx context.Context, in *DownloadRequest, opts ...grpc.CallOption) (*DownloadResponse, error) {
-	out := new(DownloadResponse)
-	err := c.cc.Invoke(ctx, DownloadService_Download_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// DownloadServiceServer is the server API for DownloadService service.
-// All implementations must embed UnimplementedDownloadServiceServer
-// for forward compatibility
-type DownloadServiceServer interface {
-	Download(context.Context, *DownloadRequest) (*DownloadResponse, error)
-	mustEmbedUnimplementedDownloadServiceServer()
-}
-
-// UnimplementedDownloadServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedDownloadServiceServer struct {
-}
-
-func (UnimplementedDownloadServiceServer) Download(context.Context, *DownloadRequest) (*DownloadResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Download not implemented")
-}
-func (UnimplementedDownloadServiceServer) mustEmbedUnimplementedDownloadServiceServer() {}
-
-// UnsafeDownloadServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to DownloadServiceServer will
-// result in compilation errors.
-type UnsafeDownloadServiceServer interface {
-	mustEmbedUnimplementedDownloadServiceServer()
-}
-
-func RegisterDownloadServiceServer(s grpc.ServiceRegistrar, srv DownloadServiceServer) {
-	s.RegisterService(&DownloadService_ServiceDesc, srv)
-}
-
-func _DownloadService_Download_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ClientService_Download_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DownloadRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DownloadServiceServer).Download(ctx, in)
+		return srv.(ClientServiceServer).Download(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: DownloadService_Download_FullMethodName,
+		FullMethod: ClientService_Download_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DownloadServiceServer).Download(ctx, req.(*DownloadRequest))
+		return srv.(ClientServiceServer).Download(ctx, req.(*DownloadRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// DownloadService_ServiceDesc is the grpc.ServiceDesc for DownloadService service.
+// ClientService_ServiceDesc is the grpc.ServiceDesc for ClientService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var DownloadService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "AllServices.DownloadService",
-	HandlerType: (*DownloadServiceServer)(nil),
+var ClientService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "AllServices.ClientService",
+	HandlerType: (*ClientServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "Upload",
+			Handler:    _ClientService_Upload_Handler,
+		},
+		{
 			MethodName: "Download",
-			Handler:    _DownloadService_Download_Handler,
+			Handler:    _ClientService_Download_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

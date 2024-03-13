@@ -4,19 +4,15 @@ option go_package = "Ass/AllServices";
 
 package AllServices;
 
-//----------  Update  -----------//
+//----------  Update and Download  -----------//
+//from client to master -m.s
 message UpdateRequest {
 }
 message UpdateResponse {
     int32 port_num = 1;
     string data_node_ip = 2;
 }
-service UpdateService {
-    rpc Upload(UpdateRequest) returns (UpdateResponse);
-}
 
-//----------  Download  -----------//
-//from client to master -m.s
 message DownloadRequest {
     string file_name = 1;
 }
@@ -25,9 +21,13 @@ message DownloadResponse {
     int32 port_num = 1;
     string data_node_ip = 2;
 }
-service DownloadService {
+
+service ClientService {
+    rpc Upload(UpdateRequest) returns (UpdateResponse);
     rpc Download(DownloadRequest) returns (DownloadResponse);
 }
+
+
 
 //----------  Download File  -----------//
 message DownloadFileRequest {
