@@ -73,20 +73,6 @@ service TransferFileService {
     rpc TransferFile(TransferFileUploadRequest) returns (TransferFileUploadResponse);
 }
 
-//----------  Alive  -----------//
-//from mashine to master 
-//? wla n el master to machine ??
-message AliveRequest {
-    int32 keeper_id = 1;
-}
-
-message AliveResponse {
-}
-
-service AliveService {
-    rpc Alive(AliveRequest) returns (AliveResponse);
-}
-
 
 //----------  Existance for Replication   -----------//
 //from master to mashine
@@ -103,8 +89,9 @@ service RepExstService {
     rpc RepExst(RepExstRequest) returns (RepExstResponse);
 }
 
-//----------  Keeper Done (step5)  -----------//
+//----------  Keeper Done (step5) and Alive  -----------//
 //from mashine to master
+
 message KeeperDoneRequest {
     string file_name = 1;
     int32 file_size = 2;
@@ -116,16 +103,24 @@ message KeeperDoneRequest {
     // i think we need the id of the machine as there maybe multiple users distrubuted on machine keepers,
     // so i want to know which machine finish to notify which user
     //? but how to get the id of the user ?
-    //? if we will now him from the port he connected to master by it , tb ma n4el el keeper_id kman w nm4y bnfs el mbda?!!
-    
-    
+    //? if we will now him from the port he connected to master by it , tb ma n4el el keeper_id kman w nm4y bnfs el mbda?!!   
 }
 
 message KeeperDoneResponse {  
 }
 
-service KeeperDoneService {
+//? wla n el master to machine ??
+message AliveRequest {
+    int32 keeper_id = 1;
+}
+
+message AliveResponse {
+}
+
+
+service KeepersService {
     rpc KeeperDone(KeeperDoneRequest) returns (KeeperDoneResponse);
+    rpc Alive(AliveRequest) returns (AliveResponse);
 }
 
 //----------  Master Done Uploading  -----------//

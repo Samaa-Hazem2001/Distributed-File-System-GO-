@@ -507,96 +507,6 @@ var TransferFileService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	AliveService_Alive_FullMethodName = "/AllServices.AliveService/Alive"
-)
-
-// AliveServiceClient is the client API for AliveService service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type AliveServiceClient interface {
-	Alive(ctx context.Context, in *AliveRequest, opts ...grpc.CallOption) (*AliveResponse, error)
-}
-
-type aliveServiceClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewAliveServiceClient(cc grpc.ClientConnInterface) AliveServiceClient {
-	return &aliveServiceClient{cc}
-}
-
-func (c *aliveServiceClient) Alive(ctx context.Context, in *AliveRequest, opts ...grpc.CallOption) (*AliveResponse, error) {
-	out := new(AliveResponse)
-	err := c.cc.Invoke(ctx, AliveService_Alive_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// AliveServiceServer is the server API for AliveService service.
-// All implementations must embed UnimplementedAliveServiceServer
-// for forward compatibility
-type AliveServiceServer interface {
-	Alive(context.Context, *AliveRequest) (*AliveResponse, error)
-	mustEmbedUnimplementedAliveServiceServer()
-}
-
-// UnimplementedAliveServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedAliveServiceServer struct {
-}
-
-func (UnimplementedAliveServiceServer) Alive(context.Context, *AliveRequest) (*AliveResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Alive not implemented")
-}
-func (UnimplementedAliveServiceServer) mustEmbedUnimplementedAliveServiceServer() {}
-
-// UnsafeAliveServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to AliveServiceServer will
-// result in compilation errors.
-type UnsafeAliveServiceServer interface {
-	mustEmbedUnimplementedAliveServiceServer()
-}
-
-func RegisterAliveServiceServer(s grpc.ServiceRegistrar, srv AliveServiceServer) {
-	s.RegisterService(&AliveService_ServiceDesc, srv)
-}
-
-func _AliveService_Alive_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AliveRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AliveServiceServer).Alive(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AliveService_Alive_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AliveServiceServer).Alive(ctx, req.(*AliveRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-// AliveService_ServiceDesc is the grpc.ServiceDesc for AliveService service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var AliveService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "AllServices.AliveService",
-	HandlerType: (*AliveServiceServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "Alive",
-			Handler:    _AliveService_Alive_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "Ass/AllServices/dfs.proto",
-}
-
-const (
 	RepExstService_RepExst_FullMethodName = "/AllServices.RepExstService/RepExst"
 )
 
@@ -687,89 +597,126 @@ var RepExstService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	KeeperDoneService_KeeperDone_FullMethodName = "/AllServices.KeeperDoneService/KeeperDone"
+	KeepersService_KeeperDone_FullMethodName = "/AllServices.KeepersService/KeeperDone"
+	KeepersService_Alive_FullMethodName      = "/AllServices.KeepersService/Alive"
 )
 
-// KeeperDoneServiceClient is the client API for KeeperDoneService service.
+// KeepersServiceClient is the client API for KeepersService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type KeeperDoneServiceClient interface {
+type KeepersServiceClient interface {
 	KeeperDone(ctx context.Context, in *KeeperDoneRequest, opts ...grpc.CallOption) (*KeeperDoneResponse, error)
+	Alive(ctx context.Context, in *AliveRequest, opts ...grpc.CallOption) (*AliveResponse, error)
 }
 
-type keeperDoneServiceClient struct {
+type keepersServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewKeeperDoneServiceClient(cc grpc.ClientConnInterface) KeeperDoneServiceClient {
-	return &keeperDoneServiceClient{cc}
+func NewKeepersServiceClient(cc grpc.ClientConnInterface) KeepersServiceClient {
+	return &keepersServiceClient{cc}
 }
 
-func (c *keeperDoneServiceClient) KeeperDone(ctx context.Context, in *KeeperDoneRequest, opts ...grpc.CallOption) (*KeeperDoneResponse, error) {
+func (c *keepersServiceClient) KeeperDone(ctx context.Context, in *KeeperDoneRequest, opts ...grpc.CallOption) (*KeeperDoneResponse, error) {
 	out := new(KeeperDoneResponse)
-	err := c.cc.Invoke(ctx, KeeperDoneService_KeeperDone_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, KeepersService_KeeperDone_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// KeeperDoneServiceServer is the server API for KeeperDoneService service.
-// All implementations must embed UnimplementedKeeperDoneServiceServer
+func (c *keepersServiceClient) Alive(ctx context.Context, in *AliveRequest, opts ...grpc.CallOption) (*AliveResponse, error) {
+	out := new(AliveResponse)
+	err := c.cc.Invoke(ctx, KeepersService_Alive_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// KeepersServiceServer is the server API for KeepersService service.
+// All implementations must embed UnimplementedKeepersServiceServer
 // for forward compatibility
-type KeeperDoneServiceServer interface {
+type KeepersServiceServer interface {
 	KeeperDone(context.Context, *KeeperDoneRequest) (*KeeperDoneResponse, error)
-	mustEmbedUnimplementedKeeperDoneServiceServer()
+	Alive(context.Context, *AliveRequest) (*AliveResponse, error)
+	mustEmbedUnimplementedKeepersServiceServer()
 }
 
-// UnimplementedKeeperDoneServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedKeeperDoneServiceServer struct {
+// UnimplementedKeepersServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedKeepersServiceServer struct {
 }
 
-func (UnimplementedKeeperDoneServiceServer) KeeperDone(context.Context, *KeeperDoneRequest) (*KeeperDoneResponse, error) {
+func (UnimplementedKeepersServiceServer) KeeperDone(context.Context, *KeeperDoneRequest) (*KeeperDoneResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method KeeperDone not implemented")
 }
-func (UnimplementedKeeperDoneServiceServer) mustEmbedUnimplementedKeeperDoneServiceServer() {}
+func (UnimplementedKeepersServiceServer) Alive(context.Context, *AliveRequest) (*AliveResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Alive not implemented")
+}
+func (UnimplementedKeepersServiceServer) mustEmbedUnimplementedKeepersServiceServer() {}
 
-// UnsafeKeeperDoneServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to KeeperDoneServiceServer will
+// UnsafeKeepersServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to KeepersServiceServer will
 // result in compilation errors.
-type UnsafeKeeperDoneServiceServer interface {
-	mustEmbedUnimplementedKeeperDoneServiceServer()
+type UnsafeKeepersServiceServer interface {
+	mustEmbedUnimplementedKeepersServiceServer()
 }
 
-func RegisterKeeperDoneServiceServer(s grpc.ServiceRegistrar, srv KeeperDoneServiceServer) {
-	s.RegisterService(&KeeperDoneService_ServiceDesc, srv)
+func RegisterKeepersServiceServer(s grpc.ServiceRegistrar, srv KeepersServiceServer) {
+	s.RegisterService(&KeepersService_ServiceDesc, srv)
 }
 
-func _KeeperDoneService_KeeperDone_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _KeepersService_KeeperDone_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(KeeperDoneRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(KeeperDoneServiceServer).KeeperDone(ctx, in)
+		return srv.(KeepersServiceServer).KeeperDone(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: KeeperDoneService_KeeperDone_FullMethodName,
+		FullMethod: KeepersService_KeeperDone_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(KeeperDoneServiceServer).KeeperDone(ctx, req.(*KeeperDoneRequest))
+		return srv.(KeepersServiceServer).KeeperDone(ctx, req.(*KeeperDoneRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// KeeperDoneService_ServiceDesc is the grpc.ServiceDesc for KeeperDoneService service.
+func _KeepersService_Alive_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AliveRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KeepersServiceServer).Alive(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: KeepersService_Alive_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KeepersServiceServer).Alive(ctx, req.(*AliveRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// KeepersService_ServiceDesc is the grpc.ServiceDesc for KeepersService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var KeeperDoneService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "AllServices.KeeperDoneService",
-	HandlerType: (*KeeperDoneServiceServer)(nil),
+var KeepersService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "AllServices.KeepersService",
+	HandlerType: (*KeepersServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "KeeperDone",
-			Handler:    _KeeperDoneService_KeeperDone_Handler,
+			Handler:    _KeepersService_KeeperDone_Handler,
+		},
+		{
+			MethodName: "Alive",
+			Handler:    _KeepersService_Alive_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
