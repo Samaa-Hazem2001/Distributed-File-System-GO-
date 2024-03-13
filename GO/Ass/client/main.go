@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"log"
 
 	pb "Ass/AllServices" // Import the generated package
 
@@ -10,13 +12,13 @@ import (
 )
 
 func main() {
-//later:assume that the client connection can be one upload or one download only
-	
+	//later:assume that the client connection can be one upload or one download only
+
 	// Read input from user
 	fmt.Print("For uploading enter '1' , for download enter '2': ")
 	var upORdown int
 	fmt.Scanln(&upORdown)
-	
+
 	conn, err := grpc.Dial("localhost:8080", grpc.WithInsecure())
 	if err != nil {
 		fmt.Println("did not connect:", err)
@@ -25,7 +27,7 @@ func main() {
 	defer conn.Close()
 	c := pb.NewClientServiceClient(conn)
 
-	if(upORdown == 1 ) {
+	if upORdown == 1 {
 		//---------  upload file request to master  ---------//
 		// Call the RPC method
 		resp, err := c.Upload(context.Background(), &pb.UpdateRequest{})
@@ -38,22 +40,38 @@ func main() {
 		fmt.Println("PortNum :", resp.GetPortNum())
 		fmt.Println("DataNodeIp :", resp.GetDataNodeIp())
 
-
 		//part2:for uploading: connect to the machine keeper with PortNum and DataNodeIp
-		// conn2, err := grpc.Dial("localhost:...", grpc.WithInsecure())
-		// if err != nil {
-		// 	fmt.Println("did not connect:", err)
-		// 	return
-		// }
-		// defer conn2.Close()
-		// c2 := pb.NewUploadFileServiceClient(conn)
+
+		// later: uncomment this line
+		// conn2, err := grpc.Dial(resp.GetDataNodeIp()+":"+strconv.Itoa(int(resp.GetPortNum())), grpc.WithInsecure())
+		conn2, err := grpc.Dial("localhost:3000", grpc.WithInsecure())
+		if err != nil {
+			fmt.Println("did not connect:", err)
+			return
+		}
+		defer conn2.Close()
+		c2 := pb.NewUploadFileServiceClient(conn2)
+		// Open the file to upload
+		fileContent, err := ioutil.ReadFile("D:/CUFE24/4th year/second term/Wireless Networks/test.mp4")
+		if err != nil {
+			log.Fatalf("Failed to read file: %v", err)
+		}
+
+		// Send the file content to the server
+		_, err = c2.UploadFile(context.Background(), &pb.UploadFileRequest{
+			File: fileContent,
+		})
+		if err != nil {
+			log.Fatalf("Failed to upload file: %v", err)
+		}
+
+		fmt.Println("File uploaded successfully")
 
 		// // later: take the file from client :...
-		// //NOTE: lazm t2ol ll machine esm el file ely el client 3ays y3mlo save 
-		// //y3ny e3ml soket tb3t el file name , then eb3 el file nfso chunk by chunck 
+		// //NOTE: lazm t2ol ll machine esm el file ely el client 3ays y3mlo save
+		// //y3ny e3ml soket tb3t el file name , then eb3 el file nfso chunk by chunck
 		// //parse el file 34an ytb3t 1000 bytes for ex
 		// //NOTE: you have to mark the end of the file chunks transfaring , you
-
 
 		// // Call the RPC method
 		// resp, err := c.UploadFile(context.Background(), &pb.UploadFileRequest{})
@@ -62,13 +80,12 @@ func main() {
 		// 	return
 		// }
 
-		// //transfare file throuh sockets 
+		// //transfare file throuh sockets
 		// //sokets connection :
 		// // conn2, err := ned.tcp.Dial("localhost:...", grpc.WithInsecure())
 
-
 	}
-	if(upORdown == 2 ){ //later: change this to "else"
+	if upORdown == 2 { //later: change this to "else"
 		//---------  download file request to master  ---------//
 		// Call the RPC method
 		resp, err := c.Download(context.Background(), &pb.DownloadRequest{FileName: "testfile_for_downloading"})
