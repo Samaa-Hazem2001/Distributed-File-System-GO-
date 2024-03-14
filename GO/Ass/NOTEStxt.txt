@@ -1,0 +1,42 @@
+
+
+a,{test,....,....}, alive ,{3000: busy ,(3001,not busy)}   
+b,{test,....,....}, dead ,{(3000,busy) ,(3001,not busy)}
+c,{...,....,....}, dead ,{(3000,busy) ,(3001,not busy)}
+d,{...,....,....}, alive ,{(3000,busy) ,(3001,not busy)}
+   
+set({test,....,....},{test,....,....})={(test,a),...,...,..}
+list_to_search {(test,{a})}
+
+mab x
+x[a] = alive
+
+
+(test,{a,b,c})
+//later: what if (test,{a}), then we will tell machine a to call b and transfare the file , then we will check again on test file and found it will need one more replication , so we will make a comunicate with c , so can a communicate with both machines at the same time? or will the order to transorming with c will being loose.
+
+
+//later: assume at the beginning of the whole programm , we will start from scratch as if every machine has no files
+// , so if machine a and b as shown above hold file "test" , and the replication algorithm wake up after 10sec for the first time , it will se like the file has no replication
+
+IP0 = 125.266.265.56
+IP1 = 
+IP2 = 125.266.265.56
+IP3 =
+
+IP0_P0 = 3000 
+IP0_P1 = 3000 
+IP0_P2 = 3000 
+
+
+
+//
+
+
+
+
+
+
+
+
+
