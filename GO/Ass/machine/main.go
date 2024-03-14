@@ -24,6 +24,11 @@ type DownloadServer struct {
 	pb.UnimplementedDownloadFileServiceServer
 }
 
+var uploadIP string
+var uploadPortNum int32
+var filename string
+var fileSize int
+
 // func (s *UploadServer) Upload(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {
 // 	// text := req.GetText()
 // 	port := int32(8080) //later: change it to be an unbusy port
@@ -31,21 +36,22 @@ type DownloadServer struct {
 // 	return &pb.UpdateResponse{PortNum: port,DataNodeIp: ip_string}, nil
 // }
 
-// UploadFile implements the UploadFileService.UploadFile method
 func (s *UploadServer) UploadFile(ctx context.Context, req *pb.UploadFileRequest) (*pb.UploadFileResponse, error) {
-	// later: what should I name the file
-	err := ioutil.WriteFile("uploaded_file.mp4", req.File, 0644)
+	err := ioutil.WriteFile(req.FileName, req.File, 0644)
 	if err != nil {
 		log.Printf("Failed to write file: %v", err)
 		return nil, err
 	}
+	uploadIP = req.DataNodeIp
+	uploadPortNum = req.PortNum
+	filename = req.FileName
+	fileSize = len(req.File)
 	return &pb.UploadFileResponse{}, nil
 }
 
-// DownloadFile implements the DownloadFile RPC method
 func (s *DownloadServer) DownloadFile(ctx context.Context, req *pb.DownloadFileRequest) (*pb.DownloadFileResponse, error) {
 	// Read the file content from the disk
-	//
+	//later: change filename
 	fileContent, err := ioutil.ReadFile("uploaded_file.mp4")
 	if err != nil {
 		log.Fatalf("Failed to read file: %v", err)
@@ -68,12 +74,34 @@ func main() {
 	pb.RegisterUploadFileServiceServer(s, &UploadServer{})
 
 	go func() {
-		lis, err := net.Listen("tcp", ":3000")
+		lis, err := net.Listen("tcp", ":8000")
 		if err != nil {
 			fmt.Println("failed to listen:", err)
 			return
 		}
-		fmt.Println("Server started. Listening on port 8080...")
+		fmt.Println("Server started. Listening on port 8000...")
+		if err := s.Serve(lis); err != nil {
+			fmt.Println("failed to serve:", err)
+		}
+	}()
+	go func() {
+		lis, err := net.Listen("tcp", ":8001")
+		if err != nil {
+			fmt.Println("failed to listen:", err)
+			return
+		}
+		fmt.Println("Server started. Listening on port 8001...")
+		if err := s.Serve(lis); err != nil {
+			fmt.Println("failed to serve:", err)
+		}
+	}()
+	go func() {
+		lis, err := net.Listen("tcp", ":8002")
+		if err != nil {
+			fmt.Println("failed to listen:", err)
+			return
+		}
+		fmt.Println("Server started. Listening on port 8002...")
 		if err := s.Serve(lis); err != nil {
 			fmt.Println("failed to serve:", err)
 		}
@@ -82,12 +110,12 @@ func main() {
 	pb.RegisterDownloadFileServiceServer(s, &DownloadServer{})
 
 	go func() {
-		lis, err := net.Listen("tcp", ":3000")
+		lis, err := net.Listen("tcp", ":8000")
 		if err != nil {
 			fmt.Println("failed to listen:", err)
 			return
 		}
-		fmt.Println("Server started. Listening on port 8080...")
+		fmt.Println("Server started. Listening on port 8000...")
 		if err := s.Serve(lis); err != nil {
 			fmt.Println("failed to serve:", err)
 		}
@@ -101,12 +129,13 @@ func main() {
 	}
 	defer conn.Close()
 	c := pb.NewKeepersServiceClient(conn)
+	KeeperId := 0
 
 	// Concurrently send KeepersService requests to master
 	go func() {
 		for {
 			// later: change file name...
-			resp, err := c.KeeperDone(context.Background(), &pb.KeeperDoneRequest{FileName: "uploaded_file.mp4", FileSize: int32(2000), PortNum: int32(9999), KeeperId: int32(0)})
+			resp, err := c.KeeperDone(context.Background(), &pb.KeeperDoneRequest{FileName: filename, FileSize: int32(fileSize), PortNum: uploadPortNum, DataNodeIp: uploadIP, KeeperId: int32(KeeperId)})
 			if err != nil {
 				fmt.Println("Error calling KeeperDone:", err, resp)
 			}

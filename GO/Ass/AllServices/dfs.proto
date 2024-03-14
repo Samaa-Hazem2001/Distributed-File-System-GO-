@@ -44,6 +44,11 @@ service DownloadFileService {
 //from client to machine : for uploading process (m.s)
 message UploadFileRequest {
     bytes file = 1;
+    string file_name = 2;
+    string client_ip = 3;
+    int32 port_num = 4;
+    string data_node_ip = 5;
+
 }
 // later: if there is a respose from the machine to client or the client will take the response from master only(valid to send empty response??)  
 message UploadFileResponse {
@@ -98,7 +103,7 @@ message KeeperDoneRequest {
 
     int32 port_num = 3;
     int32 keeper_id = 4;  //later: if you could know from the established connection's ip(el conection ely el keeper hy3mlo 34an yklm el master -m.s) who is the keeper, ypu can delete it -m.s
-
+    string data_node_ip = 5;
     //later + important : 
     // i think we need the id of the machine as there maybe multiple users distrubuted on machine keepers,
     // so i want to know which machine finish to notify which user

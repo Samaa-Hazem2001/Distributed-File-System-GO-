@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"strconv"
 
 	pb "Ass/AllServices" // Import the generated package
 
@@ -35,6 +36,9 @@ func main() {
 			fmt.Println("Error calling UploadFile:", err)
 			return
 		}
+		fmt.Print("Enter file name: ")
+		var filename string
+		fmt.Scanln(&filename)
 
 		// Print the result
 		fmt.Println("PortNum :", resp.GetPortNum())
@@ -43,8 +47,8 @@ func main() {
 		//part2:for uploading: connect to the machine keeper with PortNum and DataNodeIp
 
 		// later: uncomment this line
-		// conn2, err := grpc.Dial(resp.GetDataNodeIp()+":"+strconv.Itoa(int(resp.GetPortNum())), grpc.WithInsecure())
-		conn2, err := grpc.Dial("localhost:3000", grpc.WithInsecure())
+		conn2, err := grpc.Dial(resp.GetDataNodeIp()+":"+strconv.Itoa(int(resp.GetPortNum())), grpc.WithInsecure())
+		// conn2, err := grpc.Dial("localhost:3000", grpc.WithInsecure())
 		if err != nil {
 			fmt.Println("did not connect:", err)
 			return
@@ -59,7 +63,11 @@ func main() {
 
 		// Send the file content to the server
 		_, err = c2.UploadFile(context.Background(), &pb.UploadFileRequest{
-			File: fileContent,
+			File:       fileContent,
+			FileName:   filename,
+			ClientIp:   "ClientIp",
+			PortNum:    resp.GetPortNum(),
+			DataNodeIp: resp.GetDataNodeIp(),
 		})
 		if err != nil {
 			log.Fatalf("Failed to upload file: %v", err)
@@ -84,12 +92,13 @@ func main() {
 		// //sokets connection :
 		// // conn2, err := ned.tcp.Dial("localhost:...", grpc.WithInsecure())
 
-	}
-	if upORdown == 2 { //later: change this to "else"
+	} else { //later: change this to "else"
 		//---------  download file request to master  ---------//
 		// Call the RPC method
-		// later: change filename
-		resp, err := c.Download(context.Background(), &pb.DownloadRequest{FileName: "uploaded_file.mp4"})
+		fmt.Print("Enter file name you want to download: ")
+		var filename string
+		fmt.Scanln(&filename)
+		resp, err := c.Download(context.Background(), &pb.DownloadRequest{FileName: filename})
 		if err != nil {
 			fmt.Println("Error calling UploadFile:", err)
 			return
@@ -101,8 +110,8 @@ func main() {
 
 		// Connect to the machine to download the file
 		// later: uncomment this line
-		// conn2, err := grpc.Dial(fmt.Sprintf("%s:%d", resp.GetDataNodeIp(), resp.GetPortNum()), grpc.WithInsecure())
-		conn2, err := grpc.Dial("localhost:3000", grpc.WithInsecure())
+		conn2, err := grpc.Dial(fmt.Sprintf("%s:%d", resp.GetDataNodeIp(), resp.GetPortNum()), grpc.WithInsecure())
+		// conn2, err := grpc.Dial("localhost:3000", grpc.WithInsecure())
 		if err != nil {
 			fmt.Println("did not connect:", err)
 			return
@@ -119,7 +128,9 @@ func main() {
 		}
 
 		// Save the downloaded file
-		err = ioutil.WriteFile("downloaded_file.mp4", downloadResp.GetFile(), 0644)
+		fmt.Print("Enter file path with file name you want to save file in: ")
+		fmt.Scanln(&filename)
+		err = ioutil.WriteFile(filename, downloadResp.GetFile(), 0644)
 		if err != nil {
 			fmt.Println("Failed to write file:", err)
 			return

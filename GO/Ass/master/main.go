@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"sync"
 	"time"
@@ -16,17 +19,39 @@ import (
 
 // //// global variables //////
 var (
-	aliveCount  map[int32]int        // Define aliveCount as a global variable
-	lookupTable map[string]FileEntry // Asmaa
-	lock        sync.RWMutex         // Asmaa
+	aliveCount map[int32]int // Define aliveCount as a global variable
+	lock       sync.RWMutex
+	machineMap map[int]Machine
 )
 
-// Asmaa
-type FileEntry struct {
-	keeperId    int32
-	FilePath    string
-	IsAlive     bool
-	ReplicaNode []int32
+type PortInfo struct {
+	Port int  `json:"port"`
+	Busy bool `json:"busy"`
+}
+
+// later: should we add filepath
+type Machine struct {
+	ID        int        `json:"id"`
+	IP        string     `json:"ip"`
+	Ports     []PortInfo `json:"ports"`
+	FileNames []string
+	IsAlive   bool
+}
+
+type Config struct {
+	Machines []Machine `json:"machines"`
+}
+
+func loadConfig(filename string) (*Config, error) {
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	var config Config
+	if err := json.Unmarshal(data, &config); err != nil {
+		return nil, err
+	}
+	return &config, nil
 }
 
 // ///////////-------------  client services (from master)  -------------///////////////
@@ -36,10 +61,22 @@ type ClientServer struct {
 
 // ----------  Update  -----------//
 func (s *ClientServer) Upload(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {
-	// text := req.GetText()
-	port := int32(8080)   //later: change it to be an unbusy port
-	ipString := "ip_here" //later: change it to be the IP with the an unbusy machine
-	return &pb.UpdateResponse{PortNum: port, DataNodeIp: ipString}, nil
+	PortNum, DataNodeIp, err := findNonBusyPort()
+	if err != nil {
+		return nil, err
+	}
+	return &pb.UpdateResponse{PortNum: int32(PortNum), DataNodeIp: DataNodeIp}, nil
+}
+func findNonBusyPort() (int, string, error) {
+	for _, machine := range machineMap {
+		for i, port := range machine.Ports {
+			if !port.Busy {
+				machineMap[machine.ID].Ports[i].Busy = true
+				return port.Port, machine.IP, nil
+			}
+		}
+	}
+	return 0, "", errors.New("no available non-busy port found")
 }
 
 // ----------  Download  -----------//
@@ -50,11 +87,11 @@ func (s *ClientServer) Download(ctx context.Context, req *pb.DownloadRequest) (*
 	fmt.Println("fileName to be downloaded:", fileName)
 
 	//later: search which mahine have this file
-
-	//send the port and ip to this machine to the client
-	port := int32(3000)   //later: change it to be an unbusy port
-	ipString := "ip_down" //later: change it to be the IP with the an unbusy machine
-	return &pb.DownloadResponse{PortNum: port, DataNodeIp: ipString}, nil
+	PortNum, DataNodeIp, err := findNonBusyPort()
+	if err != nil {
+		return nil, err
+	}
+	return &pb.DownloadResponse{PortNum: int32(PortNum), DataNodeIp: DataNodeIp}, nil
 }
 
 // ///////////-------------  client services (from master)  -------------///////////////
@@ -66,40 +103,50 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 	fileName := req.GetFileName()
 	fileSize := req.GetFileSize()
 	freePortNum := req.GetPortNum()
-	keeperId := req.GetKeeperId()
+	// keeperId := req.GetKeeperId()
+
+	DataNodeIp := req.GetDataNodeIp()
+
+	// later: what about ip? is it the same as Id
+	err := setPortStatus(DataNodeIp, int(freePortNum), false)
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
 
 	//for debuging:-
 	// Print the result
 	fmt.Println("fileName :", fileName)
 	fmt.Println("fileSize :", fileSize)
 	fmt.Println("freePortNum :", freePortNum)
-	fmt.Println("keeperId :", keeperId)
-
-	// 7-The master chooses 2 other nodes to replicate the file transferred.
-	replicaNodes := chooseReplicaNodes(keeperId)
+	fmt.Println("DataNodeIp :", DataNodeIp)
 
 	// later: 5-The master tracker then adds the file record to the main look-up table.
-	// Add file record to the main lookup table
 	lock.Lock()
 	defer lock.Unlock()
-	lookupTable[fileName] = FileEntry{
-		keeperId:    keeperId,
-		FilePath:    fileName, // Example: Store file path as file name for simplicity
-		IsAlive:     true,     // Set to true assuming the node is alive
-		ReplicaNode: replicaNodes,
+	for _, machine := range machineMap {
+		if machine.IP == DataNodeIp {
+			machine.FileNames = append(machine.FileNames, fileName)
+			machineMap[machine.ID] = machine
+		}
 	}
 
 	// later: 6-The master will notify the client with a successful message.
 	return &pb.KeeperDoneResponse{}, nil
 }
-func chooseReplicaNodes(keeperId int32) []int32 {
-	numKeepers := int32(4) //?+later:change it manually or according to what?
-	replicaNodes := make([]int32, 2)
-	for i := 0; i < 2; i++ {
-		nodeId := (keeperId + int32(i) + 1) % numKeepers
-		replicaNodes[i] = nodeId
+func setPortStatus(DataNodeIp string, portNumber int, isBusy bool) error {
+	for _, machine := range machineMap {
+		if machine.IP == DataNodeIp {
+			for i, port := range machine.Ports {
+				if port.Port == portNumber {
+					machine.Ports[i].Busy = isBusy
+					machineMap[machine.ID] = machine
+					return nil
+				}
+			}
+		}
 	}
-	return replicaNodes
+
+	return fmt.Errorf("port %d not found in machine with IP %s", portNumber, DataNodeIp)
 }
 
 func (s *KeepersServer) Alive(ctx context.Context, req *pb.AliveRequest) (*pb.AliveResponse, error) {
@@ -131,16 +178,24 @@ func AliveChecker(numKeepers int32) {
 
 				if aliveCount[i] == 0 {
 					//edit the main lookup table --asmaa
+					// mark as dead
 					lock.Lock()
-					// later: which file should be deleted
-					delete(lookupTable, "file_name") // Delete the entry
+					machine := machineMap[int(i)]
+					machine.IsAlive = false
+					machineMap[int(i)] = machine
 					lock.Unlock()
 					//for debuging
 					fmt.Println("aliveCount with id = ", i, " is out of service now")
+				} else {
+					// else mark as alive
+					lock.Lock()
+					machine := machineMap[int(i)]
+					machine.IsAlive = true
+					machineMap[int(i)] = machine
+					lock.Unlock()
+					//reset the aliveCount for this keeper
+					aliveCount[i] = 0
 				}
-
-				//reset the aliveCount for this keeper
-				aliveCount[i] = 0
 
 			}
 			// Call your function or do any operation here
@@ -155,12 +210,36 @@ func AliveChecker(numKeepers int32) {
 // later: is there is one client at a time to the master? wla el master laz ykon 3ndha multiple ports 34an ykon fe kza client?
 // ?: hwa el upload request and download request from the clients ,each one have to be in a sepearte ports?(the current assumption is yes)
 func main() {
+	config, err := loadConfig("config.json")
+	if err != nil {
+		fmt.Println("Error loading configuration:", err)
+		return
+	}
+	machineMap = make(map[int]Machine)
+	for _, machine := range config.Machines {
+		machineMap[machine.ID] = machine
+		machine.FileNames = make([]string, 0)
+		// later change it depend for what?
+		machine.IsAlive = true
+	}
+	// printing
+	// fmt.Println("Machines:")
+	// for id, machine := range machineMap {
+	// 	fmt.Printf("ID: %d\n", id)
+	// 	fmt.Printf("  IP: %s\n", machine.IP)
+	// 	fmt.Printf("  FileNames: %s\n", machine.FileNames)
+	// 	fmt.Printf("  IsAlive: %t\n", machine.IsAlive)
+	// 	fmt.Println("  Ports:")
+	// 	for _, port := range machine.Ports {
+	// 		fmt.Printf("    %d (%t)\n", port.Port, port.Busy)
+	// 	}
+	// 	fmt.Println()
+	// }
+
 	//NOTE: map[KeyType]ValueType
 	// var aliveCount map[int]int
 	aliveCount = make(map[int32]int)
 	numKeepers := int32(4) //?+later:change it manually or according to what?
-
-	lookupTable = make(map[string]FileEntry) // Asmaa
 
 	for i := int32(0); i < numKeepers; i++ { // assuming you want to initialize values for keys 0 to 9
 		aliveCount[i] = 0

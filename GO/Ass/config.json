@@ -1,0 +1,24 @@
+{
+  "machines": [
+    {
+      "id": 0,
+      "ip": "localhost",
+      "ports": [{"port": 8000, "busy": false}, {"port": 8001, "busy": false}, {"port": 8002, "busy": false}]
+    },
+    {
+      "id": 1,
+      "ip": "localhost",
+      "ports": [{"port": 8000, "busy": false}, {"port": 8001, "busy": false}, {"port": 8002, "busy": false}]
+    },
+    {
+      "id": 2,
+      "ip": "localhost",
+      "ports": [{"port": 8000, "busy": false}, {"port": 8001, "busy": false}, {"port": 8002, "busy": false}]
+    },
+    {
+      "id": 3,
+      "ip": "localhost",
+      "ports": [{"port": 8000, "busy": false}, {"port": 8001, "busy": false}, {"port": 8002, "busy": false}]
+    }
+  ]
+}
