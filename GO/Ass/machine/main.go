@@ -20,6 +20,10 @@ type UploadServer struct {
 	pb.UnimplementedUploadFileServiceServer
 }
 
+type DownloadServer struct {
+	pb.UnimplementedDownloadFileServiceServer
+}
+
 // func (s *UploadServer) Upload(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {
 // 	// text := req.GetText()
 // 	port := int32(8080) //later: change it to be an unbusy port
@@ -38,6 +42,22 @@ func (s *UploadServer) UploadFile(ctx context.Context, req *pb.UploadFileRequest
 	return &pb.UploadFileResponse{}, nil
 }
 
+// DownloadFile implements the DownloadFile RPC method
+func (s *DownloadServer) DownloadFile(ctx context.Context, req *pb.DownloadFileRequest) (*pb.DownloadFileResponse, error) {
+	// Read the file content from the disk
+	//
+	fileContent, err := ioutil.ReadFile("uploaded_file.mp4")
+	if err != nil {
+		log.Fatalf("Failed to read file: %v", err)
+		return nil, err
+	}
+
+	// Return the file content in the response
+	return &pb.DownloadFileResponse{
+		File: fileContent,
+	}, nil
+}
+
 func main() {
 
 	//------- act as sever (server to client or other keeper -for replication-) ------//
@@ -46,6 +66,20 @@ func main() {
 	// //listen to client connection or other keeper connection
 	s := grpc.NewServer()
 	pb.RegisterUploadFileServiceServer(s, &UploadServer{})
+
+	go func() {
+		lis, err := net.Listen("tcp", ":3000")
+		if err != nil {
+			fmt.Println("failed to listen:", err)
+			return
+		}
+		fmt.Println("Server started. Listening on port 8080...")
+		if err := s.Serve(lis); err != nil {
+			fmt.Println("failed to serve:", err)
+		}
+	}()
+
+	pb.RegisterDownloadFileServiceServer(s, &DownloadServer{})
 
 	go func() {
 		lis, err := net.Listen("tcp", ":3000")

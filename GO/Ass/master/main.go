@@ -23,10 +23,10 @@ var (
 
 // Asmaa
 type FileEntry struct {
-	DataNode    string
+	keeperId    int32
 	FilePath    string
 	IsAlive     bool
-	ReplicaNode []string
+	ReplicaNode []int32
 }
 
 // ///////////-------------  client services (from master)  -------------///////////////
@@ -75,7 +75,31 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 	fmt.Println("freePortNum :", freePortNum)
 	fmt.Println("keeperId :", keeperId)
 
+	// 7-The master chooses 2 other nodes to replicate the file transferred.
+	replicaNodes := chooseReplicaNodes(keeperId)
+
+	// later: 5-The master tracker then adds the file record to the main look-up table.
+	// Add file record to the main lookup table
+	lock.Lock()
+	defer lock.Unlock()
+	lookupTable[fileName] = FileEntry{
+		keeperId:    keeperId,
+		FilePath:    fileName, // Example: Store file path as file name for simplicity
+		IsAlive:     true,     // Set to true assuming the node is alive
+		ReplicaNode: replicaNodes,
+	}
+
+	// later: 6-The master will notify the client with a successful message.
 	return &pb.KeeperDoneResponse{}, nil
+}
+func chooseReplicaNodes(keeperId int32) []int32 {
+	numKeepers := int32(4) //?+later:change it manually or according to what?
+	replicaNodes := make([]int32, 2)
+	for i := 0; i < 2; i++ {
+		nodeId := (keeperId + int32(i) + 1) % numKeepers
+		replicaNodes[i] = nodeId
+	}
+	return replicaNodes
 }
 
 func (s *KeepersServer) Alive(ctx context.Context, req *pb.AliveRequest) (*pb.AliveResponse, error) {

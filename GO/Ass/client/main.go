@@ -88,7 +88,8 @@ func main() {
 	if upORdown == 2 { //later: change this to "else"
 		//---------  download file request to master  ---------//
 		// Call the RPC method
-		resp, err := c.Download(context.Background(), &pb.DownloadRequest{FileName: "testfile_for_downloading"})
+		// later: change filename
+		resp, err := c.Download(context.Background(), &pb.DownloadRequest{FileName: "uploaded_file.mp4"})
 		if err != nil {
 			fmt.Println("Error calling UploadFile:", err)
 			return
@@ -97,6 +98,34 @@ func main() {
 		// Print the result
 		fmt.Println("PortNum :", resp.GetPortNum())
 		fmt.Println("DataNodeIp :", resp.GetDataNodeIp())
+
+		// Connect to the machine to download the file
+		// later: uncomment this line
+		// conn2, err := grpc.Dial(fmt.Sprintf("%s:%d", resp.GetDataNodeIp(), resp.GetPortNum()), grpc.WithInsecure())
+		conn2, err := grpc.Dial("localhost:3000", grpc.WithInsecure())
+		if err != nil {
+			fmt.Println("did not connect:", err)
+			return
+		}
+		defer conn2.Close()
+
+		c2 := pb.NewDownloadFileServiceClient(conn2)
+
+		// Call the DownloadFile RPC method
+		downloadResp, err := c2.DownloadFile(context.Background(), &pb.DownloadFileRequest{})
+		if err != nil {
+			fmt.Println("Error calling DownloadFile:", err)
+			return
+		}
+
+		// Save the downloaded file
+		err = ioutil.WriteFile("downloaded_file.mp4", downloadResp.GetFile(), 0644)
+		if err != nil {
+			fmt.Println("Failed to write file:", err)
+			return
+		}
+
+		fmt.Println("File downloaded successfully")
 
 	}
 
