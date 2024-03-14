@@ -19,9 +19,11 @@ import (
 
 // //// global variables //////
 var (
-	aliveCount map[int32]int // Define aliveCount as a global variable
-	lock       sync.RWMutex
-	machineMap map[int]Machine
+	aliveCount  map[int32]int // Define aliveCount as a global variable
+	lock        sync.RWMutex
+	machineMap  map[int]Machine
+	filenameMap map[string][]int
+	test        bool
 )
 
 type PortInfo struct {
@@ -69,10 +71,12 @@ func (s *ClientServer) Upload(ctx context.Context, req *pb.UpdateRequest) (*pb.U
 }
 func findNonBusyPort() (int, string, error) {
 	for _, machine := range machineMap {
-		for i, port := range machine.Ports {
-			if !port.Busy {
-				machineMap[machine.ID].Ports[i].Busy = true
-				return port.Port, machine.IP, nil
+		if machine.IsAlive {
+			for i, port := range machine.Ports {
+				if !port.Busy {
+					machineMap[machine.ID].Ports[i].Busy = true
+					return port.Port, machine.IP, nil
+				}
 			}
 		}
 	}
@@ -101,7 +105,7 @@ type KeepersServer struct {
 
 func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneRequest) (*pb.KeeperDoneResponse, error) {
 	fileName := req.GetFileName()
-	fileSize := req.GetFileSize()
+	// fileSize := req.GetFileSize()
 	freePortNum := req.GetPortNum()
 	// keeperId := req.GetKeeperId()
 
@@ -115,21 +119,24 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 
 	//for debuging:-
 	// Print the result
-	fmt.Println("fileName :", fileName)
-	fmt.Println("fileSize :", fileSize)
-	fmt.Println("freePortNum :", freePortNum)
-	fmt.Println("DataNodeIp :", DataNodeIp)
+	// fmt.Println("fileName :", fileName)
+	// fmt.Println("fileSize :", fileSize)
+	// fmt.Println("freePortNum :", freePortNum)
+	// fmt.Println("DataNodeIp :", DataNodeIp)
 
 	// later: 5-The master tracker then adds the file record to the main look-up table.
-	lock.Lock()
-	defer lock.Unlock()
-	for _, machine := range machineMap {
-		if machine.IP == DataNodeIp {
-			machine.FileNames = append(machine.FileNames, fileName)
-			machineMap[machine.ID] = machine
+
+	if test {
+		lock.Lock()
+		defer lock.Unlock()
+		for _, machine := range machineMap {
+			if machine.IP == DataNodeIp {
+				machine.FileNames = append(machine.FileNames, fileName)
+				machineMap[machine.ID] = machine
+			}
 		}
 	}
-
+	test = true
 	// later: 6-The master will notify the client with a successful message.
 	return &pb.KeeperDoneResponse{}, nil
 }
@@ -203,6 +210,90 @@ func AliveChecker(numKeepers int32) {
 			// Add other cases if you need to handle other channels
 		}
 	}
+}
+
+func replicationChecker() {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+
+			filenameMap = generateFilenameMap()
+
+			for filename, machineIDs := range filenameMap {
+				fmt.Printf("%s: %v\n", filename, machineIDs)
+				sourceMachineId := machineIDs[0]
+				machineIDsLen := len(machineIDs)
+
+				for machineIDsLen < 3 {
+					destinationMachineId, err := selectMachineToCopyTo(filename)
+					if err != nil {
+						fmt.Println("Error: ", err)
+					}
+					notifyMachineDataTransfer(sourceMachineId, destinationMachineId)
+					machineIDsLen++
+					filenameMap[filename] = append(filenameMap[filename], destinationMachineId)
+				}
+			}
+		}
+	}
+}
+func selectMachineToCopyTo(filename string) (int, error) {
+	machineIDs := filenameMap[filename]
+	for _, machine := range machineMap {
+		if machine.IsAlive {
+			found := false
+			for _, id := range machineIDs {
+				if id == machine.ID {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return machine.ID, nil
+			}
+		}
+	}
+	return -1, fmt.Errorf("failed to find machine")
+}
+func notifyMachineDataTransfer(sourceMachineId int, destinationMachineId int) error {
+	conn, err := grpc.Dial("localhost:3000", grpc.WithInsecure())
+	if err != nil {
+		return fmt.Errorf("failed to connect: %v", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewNotifyMachineDataTransferServiceClient(conn)
+
+	_, err = client.NotifyMachineDataTransfer(context.Background(), &pb.NotifyMachineDataTransferRequest{
+		SourceId: int32(sourceMachineId),
+		DistId:   int32(destinationMachineId),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to notify machine for data transfer: %v", err)
+	}
+	fmt.Println("Done")
+
+	return nil
+}
+func generateFilenameMap() map[string][]int {
+	filenameMap := make(map[string][]int)
+
+	for _, machine := range machineMap {
+		if machine.IsAlive {
+			machineIDs := make(map[int]bool)
+			for _, filename := range machine.FileNames {
+				if !machineIDs[machine.ID] {
+					filenameMap[filename] = append(filenameMap[filename], machine.ID)
+					machineIDs[machine.ID] = true
+				}
+			}
+		}
+	}
+
+	return filenameMap
 }
 
 /////////////////////////////// main ///////////////////////////////
@@ -289,6 +380,7 @@ func main() {
 
 	//----- Alive check-----//
 	go AliveChecker(numKeepers)
+	go replicationChecker()
 
 	//fmt.Println("Server started. again")
 

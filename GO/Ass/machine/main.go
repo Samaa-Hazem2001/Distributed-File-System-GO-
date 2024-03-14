@@ -24,6 +24,10 @@ type DownloadServer struct {
 	pb.UnimplementedDownloadFileServiceServer
 }
 
+type NotifyMachineDataTransferServer struct {
+	pb.UnimplementedNotifyMachineDataTransferServiceServer
+}
+
 var uploadIP string
 var uploadPortNum int32
 var filename string
@@ -52,9 +56,10 @@ func (s *UploadServer) UploadFile(ctx context.Context, req *pb.UploadFileRequest
 func (s *DownloadServer) DownloadFile(ctx context.Context, req *pb.DownloadFileRequest) (*pb.DownloadFileResponse, error) {
 	// Read the file content from the disk
 	//later: change filename
-	fileContent, err := ioutil.ReadFile("uploaded_file.mp4")
+	print(req.FileName)
+	fileContent, err := ioutil.ReadFile(req.FileName)
 	if err != nil {
-		log.Fatalf("Failed to read file: %v", err)
+		log.Fatalf("%s Failed to read file: %v", req.FileName, err)
 		return nil, err
 	}
 
@@ -62,6 +67,12 @@ func (s *DownloadServer) DownloadFile(ctx context.Context, req *pb.DownloadFileR
 	return &pb.DownloadFileResponse{
 		File: fileContent,
 	}, nil
+}
+
+func (s *NotifyMachineDataTransferServer) NotifyMachineDataTransfer(ctx context.Context, req *pb.NotifyMachineDataTransferRequest) (*pb.NotifyMachineDataTransferResponse, error) {
+	sourceID := req.GetSourceId()
+	fmt.Printf("Notification received to transfer data from source ID: %d\n", sourceID)
+	return &pb.NotifyMachineDataTransferResponse{}, nil
 }
 
 func main() {
@@ -116,6 +127,43 @@ func main() {
 			return
 		}
 		fmt.Println("Server started. Listening on port 8000...")
+		if err := s.Serve(lis); err != nil {
+			fmt.Println("failed to serve:", err)
+		}
+	}()
+	go func() {
+		lis, err := net.Listen("tcp", ":8001")
+		if err != nil {
+			fmt.Println("failed to listen:", err)
+			return
+		}
+		fmt.Println("Server started. Listening on port 8001...")
+		if err := s.Serve(lis); err != nil {
+			fmt.Println("failed to serve:", err)
+		}
+	}()
+	go func() {
+		lis, err := net.Listen("tcp", ":8002")
+		if err != nil {
+			fmt.Println("failed to listen:", err)
+			return
+		}
+		fmt.Println("Server started. Listening on port 8002...")
+		if err := s.Serve(lis); err != nil {
+			fmt.Println("failed to serve:", err)
+		}
+	}()
+
+	// Register the gRPC service implementation
+	pb.RegisterNotifyMachineDataTransferServiceServer(s, &NotifyMachineDataTransferServer{})
+
+	go func() {
+		lis, err := net.Listen("tcp", ":3000")
+		if err != nil {
+			fmt.Println("failed to listen:", err)
+			return
+		}
+		fmt.Println("Server started. Listening on port 3000...")
 		if err := s.Serve(lis); err != nil {
 			fmt.Println("failed to serve:", err)
 		}

@@ -36,6 +36,10 @@ func main() {
 			fmt.Println("Error calling UploadFile:", err)
 			return
 		}
+		fmt.Print("Enter file path you want to upload: ")
+		var filepath string
+		fmt.Scanln(&filepath)
+
 		fmt.Print("Enter file name: ")
 		var filename string
 		fmt.Scanln(&filename)
@@ -55,7 +59,8 @@ func main() {
 		}
 		defer conn2.Close()
 		c2 := pb.NewUploadFileServiceClient(conn2)
-		// Open the file to upload
+		// later: uncomment this line
+		// fileContent, err := ioutil.ReadFile(filepath)
 		fileContent, err := ioutil.ReadFile("D:/CUFE24/4th year/second term/Wireless Networks/test.mp4")
 		if err != nil {
 			log.Fatalf("Failed to read file: %v", err)
@@ -121,7 +126,7 @@ func main() {
 		c2 := pb.NewDownloadFileServiceClient(conn2)
 
 		// Call the DownloadFile RPC method
-		downloadResp, err := c2.DownloadFile(context.Background(), &pb.DownloadFileRequest{})
+		downloadResp, err := c2.DownloadFile(context.Background(), &pb.DownloadFileRequest{FileName: filename})
 		if err != nil {
 			fmt.Println("Error calling DownloadFile:", err)
 			return
