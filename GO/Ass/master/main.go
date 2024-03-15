@@ -9,6 +9,7 @@ import (
 	"net"
 	"sync"
 	"time"
+	"strconv"
 
 	//"strings"
 
@@ -107,8 +108,12 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 	// fileSize := req.GetFileSize()
 	freePortNum := req.GetPortNum()
 	// keeperId := req.GetKeeperId()
-
 	DataNodeIp := req.GetDataNodeIp()
+
+	clientPort := req.GetClientPortNum()
+	clientIp := req.GetClientIp()
+
+	ConfirmClient(clientIp, clientPort) 
 
 	// later: what about ip? is it the same as Id
 	err := setPortStatus(DataNodeIp, int(freePortNum), false)
@@ -118,10 +123,12 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 
 	//for debuging:-
 	// Print the result
-	// fmt.Println("fileName :", fileName)
+	fmt.Println("fileName :", fileName)
 	// fmt.Println("fileSize :", fileSize)
-	// fmt.Println("freePortNum :", freePortNum)
-	// fmt.Println("DataNodeIp :", DataNodeIp)
+	fmt.Println("freePortNum :", freePortNum)
+	fmt.Println("DataNodeIp :", DataNodeIp)
+	fmt.Println("clientPort :", clientPort)
+	fmt.Println("clientIp :", clientIp)
 
 	// later: 5-The master tracker then adds the file record to the main look-up table.
 
@@ -136,6 +143,31 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 
 	// later: 6-The master will notify the client with a successful message.
 	return &pb.KeeperDoneResponse{}, nil
+}
+func ConfirmClient(ip string, port int32) {
+	conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), grpc.WithInsecure())
+	if err != nil {
+		fmt.Println("Failed to connect to client with IP:", ip, ":", err)
+		return
+	}
+
+	defer conn.Close()
+	c := pb.NewDoneUpServiceClient(conn)
+
+	// ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	// _, err = c.DoneUpload(ctx, &pb.EmptyMessage{})
+	// cancel()
+	// if err != nil {
+	// 	return errors.New("RPC failed: " + err.Error())
+	// }
+	// return nil
+
+	resp, err := c.DoneUp(context.Background(), &pb.DoneUpRequest{})
+	if err != nil {
+		fmt.Println("Error calling DoneUp:", err,resp)
+		return
+	}
+
 }
 func setPortStatus(DataNodeIp string, portNumber int, isBusy bool) error {
 	for _, machine := range machineMap {
@@ -160,7 +192,7 @@ func (s *KeepersServer) Alive(ctx context.Context, req *pb.AliveRequest) (*pb.Al
 
 	//for debuging:-
 	// Print the result
-	fmt.Println("keeperId :", keeperId)
+	// fmt.Println("keeperId :", keeperId)
 
 	return &pb.AliveResponse{}, nil
 }
@@ -175,8 +207,8 @@ func AliveChecker(numKeepers int32) {
 
 			//for debuging
 			// Perform the task you want to do every 8 seconds
-			fmt.Println("Alive Tracker is here")
-			fmt.Println("aliveCount[i]", aliveCount[0])
+			// fmt.Println("Alive Tracker is here")
+			// fmt.Println("aliveCount[i]", aliveCount[0])
 
 			for i := int32(0); i < numKeepers; i++ { // assuming you want to initialize values for keys 0 to 9
 
@@ -189,7 +221,7 @@ func AliveChecker(numKeepers int32) {
 					machineMap[int(i)] = machine
 					lock.Unlock()
 					//for debuging
-					fmt.Println("aliveCount with id = ", i, " is out of service now")
+					// fmt.Println("aliveCount with id = ", i, " is out of service now")
 				} else {
 					// else mark as alive
 					lock.Lock()

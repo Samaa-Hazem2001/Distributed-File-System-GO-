@@ -6,21 +6,31 @@ import (
 	"io/ioutil"
 	"log"
 	"strconv"
+	"net"
 
 	pb "Ass/AllServices" // Import the generated package
 
 	"google.golang.org/grpc"
 )
+type DoneUpServer struct {
+	pb.UnimplementedDoneUpServiceServer
+}
+
+func (s *DoneUpServer) DoneUp(ctx context.Context, req *pb.DoneUpRequest) (*pb.DoneUpResponse, error) {
+	return &pb.DoneUpResponse{}, nil
+}
 
 func main() {
 	//later:assume that the client connection can be one upload or one download only
 
+	//some definations:
+	var clientPort int32 = 4001; //later: hnktbha manual kda wla eh?
 	// Read input from user
 	fmt.Print("For uploading enter '1' , for download enter '2': ")
 	var upORdown int
 	fmt.Scanln(&upORdown)
 
-	conn, err := grpc.Dial("localhost:8080", grpc.WithInsecure())
+	conn, err := grpc.Dial("localhost:8080", grpc.WithInsecure()) //later:changer it to master anf d port and ip from config file //to asmaa
 	if err != nil {
 		fmt.Println("did not connect:", err)
 		return
@@ -36,6 +46,10 @@ func main() {
 			fmt.Println("Error calling UploadFile:", err)
 			return
 		}
+		// Print the result
+		fmt.Println("PortNum :", resp.GetPortNum())
+		fmt.Println("DataNodeIp :", resp.GetDataNodeIp())
+
 		fmt.Print("Enter file path you want to upload: ")
 		var filepath string
 		fmt.Scanln(&filepath)
@@ -43,10 +57,6 @@ func main() {
 		fmt.Print("Enter file name: ")
 		var filename string
 		fmt.Scanln(&filename)
-
-		// Print the result
-		fmt.Println("PortNum :", resp.GetPortNum())
-		fmt.Println("DataNodeIp :", resp.GetDataNodeIp())
 
 		//part2:for uploading: connect to the machine keeper with PortNum and DataNodeIp
 
@@ -58,10 +68,10 @@ func main() {
 			return
 		}
 		defer conn2.Close()
-		c2 := pb.NewUploadFileServiceClient(conn2)
+		c2 := pb.NewUploadDownloadFileServiceClient(conn2)
 		// later: uncomment this line
-		// fileContent, err := ioutil.ReadFile(filepath)
-		fileContent, err := ioutil.ReadFile("D:/CUFE24/4th year/second term/Wireless Networks/test.mp4")
+		fileContent, err := ioutil.ReadFile(filepath+ "/" + filename)
+		// fileContent, err := ioutil.ReadFile("C:/Users/samaa/Downloads")
 		if err != nil {
 			log.Fatalf("Failed to read file: %v", err)
 		}
@@ -70,15 +80,32 @@ func main() {
 		_, err = c2.UploadFile(context.Background(), &pb.UploadFileRequest{
 			File:       fileContent,
 			FileName:   filename,
-			ClientIp:   "ClientIp",
+			ClientIp:   "localhost",
 			PortNum:    resp.GetPortNum(),
 			DataNodeIp: resp.GetDataNodeIp(),
+			ClientPortNum: clientPort,
 		})
 		if err != nil {
 			log.Fatalf("Failed to upload file: %v", err)
 		}
 
-		fmt.Println("File uploaded successfully")
+		// fmt.Println("File uploaded successfully")
+		//wait for the requst with success that will be send for the uploaded file from the master
+		//we assume that will happen only in uploading 
+		
+		lisDone, err := net.Listen("tcp", ":" + strconv.Itoa(int(clientPort)) )
+		if err != nil {
+			fmt.Println("failed to listen in the client port (client side):", err)
+			return
+		}
+		sDone := grpc.NewServer()
+		pb.RegisterDoneUpServiceServer(sDone, &DoneUpServer{})
+		fmt.Println("Client started. Listening on port %d...",clientPort)
+		if err := sDone.Serve(lisDone); err != nil {
+			fmt.Println("failed to serve:", err)
+		} else {
+			fmt.Println("File uploaded successfully , confirmed from master")
+		}
 
 		// // later: take the file from client :...
 		// //NOTE: lazm t2ol ll machine esm el file ely el client 3ays y3mlo save
@@ -86,17 +113,7 @@ func main() {
 		// //parse el file 34an ytb3t 1000 bytes for ex
 		// //NOTE: you have to mark the end of the file chunks transfaring , you
 
-		// // Call the RPC method
-		// resp, err := c.UploadFile(context.Background(), &pb.UploadFileRequest{})
-		// if err != nil {
-		// 	fmt.Println("Error calling UploadFile:", err)
-		// 	return
-		// }
-
-		// //transfare file throuh sockets
-		// //sokets connection :
-		// // conn2, err := ned.tcp.Dial("localhost:...", grpc.WithInsecure())
-
+		
 	} else { //later: change this to "else"
 		//---------  download file request to master  ---------//
 		// Call the RPC method
@@ -123,7 +140,7 @@ func main() {
 		}
 		defer conn2.Close()
 
-		c2 := pb.NewDownloadFileServiceClient(conn2)
+		c2 := pb.NewUploadDownloadFileServiceClient(conn2)
 
 		// Call the DownloadFile RPC method
 		downloadResp, err := c2.DownloadFile(context.Background(), &pb.DownloadFileRequest{FileName: filename})

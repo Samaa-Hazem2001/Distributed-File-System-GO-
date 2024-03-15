@@ -29,32 +29,32 @@ service ClientService {
 
 
 
-//----------  Download File  -----------//
+//----------  Upload File and Download File  -----------//
+//from client to machine : for uploading process (m.s)
 message DownloadFileRequest {
     string file_name = 1;
 }
 message DownloadFileResponse {
     bytes file = 1;
 }
-service DownloadFileService {
-    rpc DownloadFile(DownloadFileRequest) returns (DownloadFileResponse);
-}
 
-//----------  Upload File  -----------//
-//from client to machine : for uploading process (m.s)
 message UploadFileRequest {
     bytes file = 1;
     string file_name = 2;
     string client_ip = 3;
-    int32 port_num = 4;
-    string data_node_ip = 5;
+    int32 client_port_num = 4;
+
+    int32 port_num = 5;
+    string data_node_ip = 6;
 
 }
 // later: if there is a respose from the machine to client or the client will take the response from master only(valid to send empty response??)  
 message UploadFileResponse {
 }
-service UploadFileService {
+service UploadDownloadFileService {
     rpc UploadFile(UploadFileRequest) returns (UploadFileResponse);
+    rpc DownloadFile(DownloadFileRequest) returns (DownloadFileResponse);
+
 }
 
 //----------  Notify Machine  -----------//
@@ -101,10 +101,14 @@ service RepExstService {
 message KeeperDoneRequest {
     string file_name = 1;
     int32 file_size = 2;
+    string client_ip = 3;
+    int32 client_port_num = 4;
 
-    int32 port_num = 3;
-    int32 keeper_id = 4;  //later: if you could know from the established connection's ip(el conection ely el keeper hy3mlo 34an yklm el master -m.s) who is the keeper, ypu can delete it -m.s
-    string data_node_ip = 5;
+    int32 port_num = 5;
+    string data_node_ip = 6;
+    //int32 keeper_id = 7;  //later: if you could know from the established connection's ip(el conection ely el keeper hy3mlo 34an yklm el master -m.s) who is the keeper, ypu can delete it -m.s
+    
+
     //later + important : 
     // i think we need the id of the machine as there maybe multiple users distrubuted on machine keepers,
     // so i want to know which machine finish to notify which user
@@ -133,7 +137,7 @@ service KeepersService {
 //from master to client 
 //? is the master really send the req to client ? y3ny el client hwa ely hyb3t req fady w ystna el master yrd b el step(6) "success"?
 
-message DoneUptRequest {
+message DoneUpRequest {
 }
 
 message DoneUpResponse {
@@ -141,5 +145,5 @@ message DoneUpResponse {
 }
 
 service DoneUpService {
-    rpc DoneUp(DoneUptRequest) returns (DoneUpResponse);
+    rpc DoneUp(DoneUpRequest) returns (DoneUpResponse);
 }
