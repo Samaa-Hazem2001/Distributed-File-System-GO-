@@ -23,7 +23,6 @@ var (
 	lock        sync.RWMutex
 	machineMap  map[int]Machine
 	filenameMap map[string][]int
-	test        bool
 )
 
 type PortInfo struct {
@@ -126,17 +125,15 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 
 	// later: 5-The master tracker then adds the file record to the main look-up table.
 
-	if test {
-		lock.Lock()
-		defer lock.Unlock()
-		for _, machine := range machineMap {
-			if machine.IP == DataNodeIp {
-				machine.FileNames = append(machine.FileNames, fileName)
-				machineMap[machine.ID] = machine
-			}
+	lock.Lock()
+	defer lock.Unlock()
+	for _, machine := range machineMap {
+		if machine.IP == DataNodeIp {
+			machine.FileNames = append(machine.FileNames, fileName)
+			machineMap[machine.ID] = machine
 		}
 	}
-	test = true
+
 	// later: 6-The master will notify the client with a successful message.
 	return &pb.KeeperDoneResponse{}, nil
 }
