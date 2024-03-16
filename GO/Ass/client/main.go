@@ -23,14 +23,18 @@ func (s *DoneUpServer) DoneUp(ctx context.Context, req *pb.DoneUpRequest) (*pb.D
 func main() {
 	//later:assume that the client connection can be one upload or one download only
 
-	//some definations:
-	var clientPort int32 = 4001; //later: hnktbha manual kda wla eh?
+	//some definations://later: hnktbhm manual kda wla eh?
+	var clientPort int32 = 4000; //later: hnktbha manual kda wla eh?
+	var clientIp string = "localhost"
+	var masterPortToClient int32 = 8080;
+	var masterIp string = "localhost"
+
 	// Read input from user
 	fmt.Print("For uploading enter '1' , for download enter '2': ")
 	var upORdown int
 	fmt.Scanln(&upORdown)
 
-	conn, err := grpc.Dial("localhost:8080", grpc.WithInsecure()) //later:changer it to master anf d port and ip from config file //to asmaa
+	conn, err := grpc.Dial(masterIp + ":" + strconv.Itoa(int(masterPortToClient)), grpc.WithInsecure()) //later:changer it to master anf d port and ip from config file //to asmaa
 	if err != nil {
 		fmt.Println("did not connect:", err)
 		return
@@ -39,6 +43,17 @@ func main() {
 	c := pb.NewClientServiceClient(conn)
 
 	if upORdown == 1 {
+		//initialize the listener of the "success" request from the master
+		lisDone, err := net.Listen("tcp",":" + strconv.Itoa(int(clientPort)) )
+		if err != nil {
+			fmt.Println("failed to listen in the client port (client side):", err)
+			return
+		}
+		sDone := grpc.NewServer()
+		pb.RegisterDoneUpServiceServer(sDone, &DoneUpServer{})
+		fmt.Println("Client started. Listening on port = ",clientPort)
+
+
 		//---------  upload file request to master  ---------//
 		// Call the RPC method
 		resp, err := c.Upload(context.Background(), &pb.UpdateRequest{})
@@ -80,7 +95,7 @@ func main() {
 		_, err = c2.UploadFile(context.Background(), &pb.UploadFileRequest{
 			File:       fileContent,
 			FileName:   filename,
-			ClientIp:   "localhost",
+			ClientIp:   clientIp,
 			PortNum:    resp.GetPortNum(),
 			DataNodeIp: resp.GetDataNodeIp(),
 			ClientPortNum: clientPort,
@@ -92,20 +107,13 @@ func main() {
 		// fmt.Println("File uploaded successfully")
 		//wait for the requst with success that will be send for the uploaded file from the master
 		//we assume that will happen only in uploading 
-		
-		lisDone, err := net.Listen("tcp", ":" + strconv.Itoa(int(clientPort)) )
-		if err != nil {
-			fmt.Println("failed to listen in the client port (client side):", err)
-			return
-		}
-		sDone := grpc.NewServer()
-		pb.RegisterDoneUpServiceServer(sDone, &DoneUpServer{})
-		fmt.Println("Client started. Listening on port %d...",clientPort)
-		if err := sDone.Serve(lisDone); err != nil {
-			fmt.Println("failed to serve:", err)
-		} else {
-			fmt.Println("File uploaded successfully , confirmed from master")
-		}
+		//go func() {
+			if err := sDone.Serve(lisDone); err != nil {
+				fmt.Println("failed to serve:", err)
+			} else {
+				fmt.Println("File uploaded successfully , confirmed from master")
+			}
+		//}()
 
 		// // later: take the file from client :...
 		// //NOTE: lazm t2ol ll machine esm el file ely el client 3ays y3mlo save

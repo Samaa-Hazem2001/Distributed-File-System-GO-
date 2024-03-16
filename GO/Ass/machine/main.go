@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"time"
+	"strconv"
 
 	//"net"
 	//"strings"
@@ -89,9 +90,15 @@ func (s *NotifyMachineDataTransferServer) NotifyMachineDataTransfer(ctx context.
 
 func main() {
 	// isUpload = false
+	//some definations://later: hnktbhm manual kda wla eh?
+	var keeperPort1 int32 = 8000; 
+	var keeperPort2 int32 = 8001;
+	var keeperPort3 int32 = 8002;
+	var masterPortToKeeper int32 = 8082;
+	var masterIp string = "localhost"
 
 	//------- act as client (client to master)  ------//
-	conn, err := grpc.Dial("localhost:8082", grpc.WithInsecure()) //<=later //to asmaa : replace with final IP and Port of the master
+	conn, err := grpc.Dial(masterIp + ":" + strconv.Itoa(int(masterPortToKeeper)), grpc.WithInsecure()) //<=later //to asmaa : replace with final IP and Port of the master
 	if err != nil {
 		fmt.Println("did not connect to the master:", err)
 		return
@@ -109,32 +116,32 @@ func main() {
 	pb.RegisterUploadDownloadFileServiceServer(s, &UploadDownloadServer{})
 
 	// listener 1
-	lis1, err := net.Listen("tcp", ":8000")
+	lis1, err := net.Listen("tcp", ":" + strconv.Itoa(int(keeperPort1)))
 	if err != nil {
 		fmt.Println("failed to listen:", err)
 		return
 	}
-	fmt.Println("Server started. Listening on port 8000...")
+	fmt.Println("Server started. Listening on port = ",keeperPort1)
 
 	// listener 2
-	lis2, err := net.Listen("tcp", ":8001")
+	lis2, err := net.Listen("tcp", ":" + strconv.Itoa(int(keeperPort2)))
 	if err != nil {
 		fmt.Println("failed to listen:", err)
 		return
 	}
-	fmt.Println("Server started. Listening on port 8001...")
+	fmt.Println("Server started. Listening on port = ",keeperPort2)
 		
 	// listener 3
-	lis3, err := net.Listen("tcp", ":8002")
+	lis3, err := net.Listen("tcp", ":" + strconv.Itoa(int(keeperPort3)))
 	if err != nil {
 		fmt.Println("failed to listen:", err)
 		return
 	}
-	fmt.Println("Server started. Listening on port 8002...")
+	fmt.Println("Server started. Listening on port = ",keeperPort3)
 		
 
 	go func() {	
-		fmt.Println("inside go " )
+		//fmt.Println("inside go " )
 		if err := s.Serve(lis1); err != nil {
 			fmt.Println("failed to serve:", err)
 		}
@@ -148,7 +155,7 @@ func main() {
 
 	}()
 	go func() {
-		fmt.Println("inside go " )
+		//fmt.Println("inside go " )
 		if err := s.Serve(lis2); err != nil {
 			fmt.Println("failed to serve:", err)
 		}
@@ -161,7 +168,7 @@ func main() {
 		// fmt.Println("isUpload = ",isUpload )
 	}()
 	go func() {
-		fmt.Println("inside go " )
+		//fmt.Println("inside go " )
 		if err := s.Serve(lis3); err != nil {
 			fmt.Println("failed to serve:", err)
 		}

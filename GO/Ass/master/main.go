@@ -113,7 +113,7 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 	clientPort := req.GetClientPortNum()
 	clientIp := req.GetClientIp()
 
-	ConfirmClient(clientIp, clientPort) 
+	//ConfirmClient(clientIp, clientPort) 
 
 	// later: what about ip? is it the same as Id
 	err := setPortStatus(DataNodeIp, int(freePortNum), false)
@@ -380,7 +380,7 @@ func main() {
 
 	// Start the gRPC server in a separate Goroutine
 	go func() {
-		fmt.Println("Keeper server started. Listening on port 8080...")
+		fmt.Println("Client server started. Listening on port 8080...")
 		if err := sUp.Serve(lisUp); err != nil {
 			fmt.Println("failed to serve:", err)
 		}
