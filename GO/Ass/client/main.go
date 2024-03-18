@@ -39,7 +39,7 @@ func main() {
 		fmt.Println("did not connect:", err)
 		return
 	}
-	defer conn.Close()
+	// defer conn.Close()
 	c := pb.NewClientServiceClient(conn)
 
 	if upORdown == 1 {
@@ -169,6 +169,8 @@ func main() {
 		fmt.Println("File downloaded successfully")
 
 	}
+
+//  conn.Close()
 
 }
 
