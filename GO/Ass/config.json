@@ -2,17 +2,17 @@
   "machines": [
     {
       "id": 0,
-      "ip": "localhost",
+      "ip": "172.28.177.165",
       "ports": [{"port": 8000, "busy": false}, {"port": 8001, "busy": false}, {"port": 8002, "busy": false}]
     },
     {
       "id": 1,
-      "ip": "localhost",
+      "ip": "172.28.177.166",
       "ports": [{"port": 8000, "busy": false}, {"port": 8001, "busy": false}, {"port": 8002, "busy": false}]
     },
     {
       "id": 2,
-      "ip": "localhost",
+      "ip": "172.28.177.166",
       "ports": [{"port": 8000, "busy": false}, {"port": 8001, "busy": false}, {"port": 8002, "busy": false}]
     },
     {

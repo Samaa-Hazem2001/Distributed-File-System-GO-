@@ -63,6 +63,7 @@ type ClientServer struct {
 
 // ----------  Update  -----------//
 func (s *ClientServer) Upload(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {
+	print("inside master upload")
 	PortNum, DataNodeIp, err := findNonBusyPort()
 	if err != nil {
 		return nil, err
@@ -133,13 +134,14 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 	// later: 5-The master tracker then adds the file record to the main look-up table.
 
 	lock.Lock()
-	defer lock.Unlock()
+	// defer lock.Unlock()
 	for _, machine := range machineMap {
 		if machine.IP == DataNodeIp {
 			machine.FileNames = append(machine.FileNames, fileName)
 			machineMap[machine.ID] = machine
 		}
 	}
+	lock.Unlock()
 
 	// later: 6-The master will notify the client with a successful message.
 	return &pb.KeeperDoneResponse{}, nil
@@ -192,7 +194,7 @@ func (s *KeepersServer) Alive(ctx context.Context, req *pb.AliveRequest) (*pb.Al
 
 	//for debuging:-
 	// Print the result
-	// fmt.Println("keeperId :", keeperId)
+	fmt.Println("keeperId :", keeperId)
 
 	return &pb.AliveResponse{}, nil
 }
@@ -366,7 +368,7 @@ func main() {
 	}
 
 	//-------------  client services (from master)  ------------- //
-	lisUp, err := net.Listen("tcp", ":8080")
+	lisUp, err := net.Listen("tcp", ":8081")
 	if err != nil {
 		fmt.Println("failed to listen:", err)
 		return
