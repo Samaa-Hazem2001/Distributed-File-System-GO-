@@ -20,11 +20,11 @@ import (
 
 // //// global variables //////
 var (
-	aliveCount  map[int32]int // Define aliveCount as a global variable
-	lock        sync.RWMutex
-	machineMap  map[int]Machine
-	filenameMap map[string][]string
-	replicationMap map[string]map[string]bool 
+	aliveCount     map[int32]int // Define aliveCount as a global variable
+	lock           sync.RWMutex
+	machineMap     map[int]Machine
+	filenameMap    map[string][]string
+	replicationMap map[string]map[string]bool
 )
 
 type PortInfo struct {
@@ -262,7 +262,7 @@ func (s *KeepersServer) ReplicationDone(ctx context.Context, req *pb.Replication
 
 	//for debuging:-
 	// Print the result
-	fmt.Println("keeperIp :", keeperId," finished the replication for file : ", fileName)
+	fmt.Println("keeperIp :", keeperId, " finished the replication for file : ", fileName)
 
 	replicationMap[fileName][keeperIp] = true
 
@@ -277,7 +277,7 @@ func (s *KeepersServer) ReplicationDone(ctx context.Context, req *pb.Replication
 
 func replicationFinishChecker() {
 	ticker := time.NewTicker(28 * time.Second) //NOTE: Create a ticker that ticks every 28 seconds to break the tie with 10 seconds of the replicationchecker
-	defer ticker.Stop()                       // Stop the ticker when the function returns
+	defer ticker.Stop()                        // Stop the ticker when the function returns
 
 	for {
 		select {
@@ -287,7 +287,7 @@ func replicationFinishChecker() {
 
 				// for debuging:
 				fmt.Printf("fileName: %s, machine_lists: %d\n", fileName, machine_lists)
-				
+
 				for currentIp, done := range machine_lists { //iterate over machines
 
 					if done {
@@ -296,14 +296,13 @@ func replicationFinishChecker() {
 
 					//later: if not done, then go to the lookup table and delete that machine for this file name
 
-					
 				}
 
 			}
 
 			//reset replicationMap
-			replicationMap = map[string]map[string]bool 
-			
+			replicationMap = map[string]map[string]bool
+
 			// Add other cases if you need to handle other channels
 		}
 	}
@@ -325,8 +324,8 @@ func replicationChecker() {
 				machineIpsLen := len(machineIps)
 
 				for machineIpsLen < 3 {
-					// destinationMachineIp, err := selectMachineToCopyTo(filename) later un comment this
-					_, err := selectMachineToCopyTo(filename)
+					// destinationMachineIp, destinationMachineId, err := selectMachineToCopyTo(filename) later un comment this
+					_, destinationMachineId, err := selectMachineToCopyTo(filename)
 					destinationMachineIp := "localhost"
 					if err != nil {
 						fmt.Println("Error: ", err)
@@ -340,12 +339,15 @@ func replicationChecker() {
 						replicationMap[filename] = make(map[string]bool)
 					}
 					replicationMap[filename][destinationMachineIp] = false
+					machine := machineMap[destinationMachineId]
+					machine.FileNames = append(machine.FileNames, filename)
+					machineMap[destinationMachineId] = machine
 				}
 			}
 		}
 	}
 }
-func selectMachineToCopyTo(filename string) (string, error) {
+func selectMachineToCopyTo(filename string) (string, int, error) {
 	machineIps := filenameMap[filename]
 	for _, machine := range machineMap {
 		if machine.IsAlive {
@@ -357,11 +359,11 @@ func selectMachineToCopyTo(filename string) (string, error) {
 				}
 			}
 			if !found {
-				return machine.IP, nil
+				return machine.IP, machine.ID, nil
 			}
 		}
 	}
-	return "", fmt.Errorf("failed to find machine")
+	return "", 0, fmt.Errorf("failed to find machine")
 }
 func notifyMachineDataTransfer(sourceMachineIp string, destinationMachineIp string, filename string) error {
 	//later: from the ip get the id
@@ -386,8 +388,7 @@ func notifyMachineDataTransfer(sourceMachineIp string, destinationMachineIp stri
 		}
 	}
 
-
-	conn, err := grpc.Dial(sourceMachineIp + ":"+strconv.Itoa(int(nonBusyPort)), grpc.WithInsecure())
+	conn, err := grpc.Dial(sourceMachineIp+":"+strconv.Itoa(int(nonBusyPort)), grpc.WithInsecure())
 	if err != nil {
 		return fmt.Errorf("failed to connect: %v", err)
 	}
@@ -443,7 +444,7 @@ func main() {
 		return
 	}
 	machineMap = make(map[int]Machine)
-	
+
 	//later: look on the machineMap here?
 	for _, machine := range config.Machines {
 		machineMap[machine.ID] = machine
