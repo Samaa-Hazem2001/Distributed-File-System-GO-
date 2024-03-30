@@ -77,7 +77,9 @@ func findNonBusyPort() (int, string, error) {
 			for i, port := range machine.Ports {
 				if !port.Busy {
 					//later: look on the machineMap here?
+					lock.Lock()
 					machineMap[machine.ID].Ports[i].Busy = true
+					lock.Unlock()
 					return port.Port, machine.IP, nil
 				}
 			}
@@ -139,8 +141,10 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 	// defer lock.Unlock()
 	for _, machine := range machineMap {
 		if machine.IP == DataNodeIp {
+			lock.Lock()
 			machine.FileNames = append(machine.FileNames, fileName)
 			machineMap[machine.ID] = machine
+			lock.Unlock()
 		}
 	}
 	lock.Unlock()
@@ -179,8 +183,10 @@ func setPortStatus(DataNodeIp string, portNumber int, isBusy bool) error {
 			for i, port := range machine.Ports {
 				if port.Port == portNumber {
 					//later: look on the machineMap here?
+					lock.Lock()
 					machine.Ports[i].Busy = isBusy
 					machineMap[machine.ID] = machine
+					lock.Unlock()
 					return nil
 				}
 			}
@@ -206,7 +212,7 @@ func (s *KeepersServer) Alive(ctx context.Context, req *pb.AliveRequest) (*pb.Al
 
 	//for debuging:-
 	// Print the result
-	fmt.Println("keeperIP :", keeperIP, " has come alive.")
+	// fmt.Println("keeperIP :", keeperIP, " has come alive.")
 
 	return &pb.AliveResponse{}, nil
 }
@@ -351,9 +357,11 @@ func replicationChecker() {
 						replicationMap[filename] = make(map[string]bool)
 					}
 					replicationMap[filename][destinationMachineIp] = false
+					lock.Lock()
 					machine := machineMap[destinationMachineId]
 					machine.FileNames = append(machine.FileNames, filename)
 					machineMap[destinationMachineId] = machine
+					lock.Unlock()
 				}
 			}
 		}
@@ -373,7 +381,7 @@ func selectMachineToCopyTo(filename string) (string, int, int, error) {
 			if !found {
 				//later:asmaa change the dheck for a machine to have unbusy port
 				//later:asmaa change the port num
-				return machine.IP, machine.ID, 3000, nil
+				return machine.IP, machine.ID, 50015, nil
 			}
 		}
 	}
@@ -395,7 +403,9 @@ func notifyMachineDataTransfer(sourceMachineIp string, destinationMachineIp stri
 	if machine.IsAlive { //later: do we have to delete this unnecessary condition?
 		for i, port := range machine.Ports {
 			if !port.Busy {
+				lock.Lock()
 				machineMap[machineID].Ports[i].Busy = true
+				lock.Unlock()
 				nonBusyPort = port.Port
 				break
 			}
