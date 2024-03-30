@@ -381,7 +381,14 @@ func selectMachineToCopyTo(filename string) (string, int, int, error) {
 			if !found {
 				//later:asmaa change the dheck for a machine to have unbusy port
 				//later:asmaa change the port num
-				return machine.IP, machine.ID, 50015, nil
+				for i, port := range machine.Ports {
+					if !port.Busy {
+						lock.Lock()
+						machineMap[machine.ID].Ports[i].Busy = true
+						lock.Unlock()
+						return machine.IP, machine.ID, port.Port, nil
+					}
+				}
 			}
 		}
 	}
