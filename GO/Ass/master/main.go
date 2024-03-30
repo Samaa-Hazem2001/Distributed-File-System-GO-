@@ -20,7 +20,7 @@ import (
 
 // //// global variables //////
 var (
-	aliveCount     map[int32]int // Define aliveCount as a global variable
+	aliveCount     map[int]int // Define aliveCount as a global variable
 	lock           sync.RWMutex
 	machineMap     map[int]Machine
 	filenameMap    map[string][]string
@@ -194,7 +194,7 @@ func (s *KeepersServer) Alive(ctx context.Context, req *pb.AliveRequest) (*pb.Al
 	keeperIP := req.GetDataNodeIp()
 
 	//from ip get id
-	var keeperId int32
+	var keeperId int
 	for _, machine := range machineMap {
 		if machine.IP == keeperIP {
 			keeperId = machine.ID
@@ -206,12 +206,12 @@ func (s *KeepersServer) Alive(ctx context.Context, req *pb.AliveRequest) (*pb.Al
 
 	//for debuging:-
 	// Print the result
-	fmt.Println("keeperIP :", keeperIP,  " has come alive.")
+	fmt.Println("keeperIP :", keeperIP, " has come alive.")
 
 	return &pb.AliveResponse{}, nil
 }
 
-func AliveChecker(numKeepers int32) {
+func AliveChecker(numKeepers int) {
 	ticker := time.NewTicker(8 * time.Second) // Create a ticker that ticks every 8 seconds
 	defer ticker.Stop()                       // Stop the ticker when the function returns
 
@@ -224,7 +224,7 @@ func AliveChecker(numKeepers int32) {
 			// fmt.Println("Alive Tracker is here")
 			// fmt.Println("aliveCount[i]", aliveCount[0])
 
-			for i := int32(0); i < numKeepers; i++ { // assuming you want to initialize values for keys 0 to 9
+			for i := int(0); i < numKeepers; i++ { // assuming you want to initialize values for keys 0 to 9
 
 				if aliveCount[i] == 0 {
 					//edit the main lookup table --asmaa
@@ -262,7 +262,7 @@ func (s *KeepersServer) ReplicationDone(ctx context.Context, req *pb.Replication
 
 	//for debuging:-
 	// Print the result
-	fmt.Println("keeperIp :", keeperId, " finished the replication for file : ", fileName)
+	fmt.Println("keeperIp :", keeperIp, " finished the replication for file : ", fileName)
 
 	replicationMap[fileName][keeperIp] = true
 
@@ -295,14 +295,25 @@ func replicationFinishChecker() {
 					}
 
 					//later: if not done, then go to the lookup table and delete that machine for this file name
+					if ips, ok := filenameMap[fileName]; ok {
+						indexToRemove := -1
+						for i, ip := range ips {
+							if ip == currentIp {
+								indexToRemove = i
+								break
+							}
+						}
+						if indexToRemove != -1 {
+							filenameMap[fileName] = append(ips[:indexToRemove], ips[indexToRemove+1:]...)
+						}
+					}
 
 				}
 
 			}
 
 			//reset replicationMap
-			replicationMap = map[string]map[string]bool
-
+			replicationMap = make(map[string]map[string]bool)
 			// Add other cases if you need to handle other channels
 		}
 	}
@@ -324,9 +335,9 @@ func replicationChecker() {
 				machineIpsLen := len(machineIps)
 
 				for machineIpsLen < 3 {
-					//later: for testing in group of laptops , uncomment this 
-					// destinationMachineIp, destinationMachineId, err := selectMachineToCopyTo(filename) later un comment this
-					_ , destinationMachineId,destMachinePort, err := selectMachineToCopyTo(filename)
+					//later: for testing in group of laptops , uncomment this
+					// destinationMachineIp, destinationMachineId, destMachinePort, err := selectMachineToCopyTo(filename) later un comment this
+					_, destinationMachineId, destMachinePort, err := selectMachineToCopyTo(filename)
 					destinationMachineIp := "localhost"
 					if err != nil {
 						fmt.Println("Error: ", err)
@@ -348,7 +359,7 @@ func replicationChecker() {
 		}
 	}
 }
-func selectMachineToCopyTo(filename string) (string, int, error) {
+func selectMachineToCopyTo(filename string) (string, int, int, error) {
 	machineIps := filenameMap[filename]
 	for _, machine := range machineMap {
 		if machine.IsAlive {
@@ -366,9 +377,9 @@ func selectMachineToCopyTo(filename string) (string, int, error) {
 			}
 		}
 	}
-	return "", 0, fmt.Errorf("failed to find machine")
+	return "", 0, 0, fmt.Errorf("failed to find machine")
 }
-func notifyMachineDataTransfer(sourceMachineIp string, destinationMachineIp string, destMachinePort int32, filename string) error {
+func notifyMachineDataTransfer(sourceMachineIp string, destinationMachineIp string, destMachinePort int, filename string) error {
 	//later: from the ip get the id
 	var machineID int
 	for _, machine := range machineMap {
@@ -402,7 +413,7 @@ func notifyMachineDataTransfer(sourceMachineIp string, destinationMachineIp stri
 	_, err = client.NotifyMachineDataTransfer(context.Background(), &pb.NotifyMachineDataTransferRequest{
 		SourceIp: sourceMachineIp,
 		DistIp:   destinationMachineIp,
-		PortNum: destMachinePort,
+		PortNum:  int32(destMachinePort),
 		FileName: filename,
 	})
 	if err != nil {
@@ -410,7 +421,7 @@ func notifyMachineDataTransfer(sourceMachineIp string, destinationMachineIp stri
 	}
 
 	//remark the nonBusyPort of the source as non busy again
-	err := setPortStatus(sourceMachineIp, int(nonBusyPort), false)
+	err = setPortStatus(sourceMachineIp, int(nonBusyPort), false)
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
@@ -472,10 +483,10 @@ func main() {
 
 	//NOTE: map[KeyType]ValueType
 	// var aliveCount map[int]int
-	aliveCount = make(map[int32]int)
-	numKeepers := int32(4) //?+later:change it manually or according to what?
+	aliveCount = make(map[int]int)
+	numKeepers := int(4) //?+later:change it manually or according to what?
 
-	for i := int32(0); i < numKeepers; i++ { // assuming you want to initialize values for keys 0 to 9
+	for i := int(0); i < numKeepers; i++ { // assuming you want to initialize values for keys 0 to 9
 		aliveCount[i] = 0
 	}
 

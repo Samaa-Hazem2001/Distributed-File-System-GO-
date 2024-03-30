@@ -34,7 +34,7 @@ var callKeeperDone func(
 	fileSize int32,
 	clientIp string,
 	clientPort int32,
-	uploadIP string,
+	// uploadIP string,
 	uploadPortNum int32,
 )
 
@@ -103,7 +103,7 @@ func (s *NotifyMachineDataTransferServer) NotifyMachineDataTransfer(ctx context.
 	if err != nil {
 		log.Fatalf("Failed to read file: %v", err)
 	}
-	err = sendFileData(destinationMachineIp, portNum,filename, fileContent)
+	err = sendFileData(destinationMachineIp, portNum, filename, fileContent)
 	if err != nil {
 		log.Fatalf("Failed to send file: %v", err)
 	}
@@ -126,7 +126,7 @@ func (s *TransferFileServiceServer) TransferFile(ctx context.Context, req *pb.Tr
 
 	return &pb.TransferFileUploadResponse{Success: true, Message: "File transferred successfully"}, nil
 }
-func sendFileData(destinationMachineIp string,destPortNum int32  , filename string, fileData []byte) error {
+func sendFileData(destinationMachineIp string, destPortNum int32, filename string, fileData []byte) error {
 	conn, err := grpc.Dial(destinationMachineIp+":"+strconv.Itoa(int(destPortNum)), grpc.WithInsecure())
 	if err != nil {
 		return err
@@ -138,7 +138,7 @@ func sendFileData(destinationMachineIp string,destPortNum int32  , filename stri
 	_, err = client.TransferFile(context.Background(), &pb.TransferFileUploadRequest{
 		FileName: filename,
 		File:     fileData,
-		PortNum: destPortNum,
+		PortNum:  destPortNum,
 	})
 	if err != nil {
 		return err
@@ -278,9 +278,9 @@ func main() {
 		fmt.Println("This is a nested function for replication")
 		resp, err := c.ReplicationDone(context.Background(),
 			&pb.ReplicationDoneRequest{
-				FileName:      filename,
-				DataNodeIp:    myIp,
-				PortNum:       destPortNum,
+				FileName:   filename,
+				DataNodeIp: myIp,
+				PortNum:    destPortNum,
 				//KeeperId: int32(KeeperId)
 			})
 		if err != nil {
@@ -309,7 +309,7 @@ func main() {
 			select {
 			case <-ticker.C:
 				fmt.Println("Alive Ping!!")
-				resp, err := c.Alive(context.Background(), &pb.AliveRequest{DataNodeIp:myIp})
+				resp, err := c.Alive(context.Background(), &pb.AliveRequest{DataNodeIp: myIp})
 				if err != nil {
 					fmt.Println("Error calling KeeperDone:", err, resp)
 					return
