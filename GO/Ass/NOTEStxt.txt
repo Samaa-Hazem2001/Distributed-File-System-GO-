@@ -31,7 +31,13 @@ IP0_P2 = 3000
 
 
 //
-
+replicationMap = {
+    'test.mp4' : {ip2:false, ip3:false } // machines with ip2 and  ip3 have been notify to make a replication for file 'test.mp4'
+}
+OR :-??
+replicationMap = {
+    'test.mp4' : [(ip,0)]
+}
 
 
 

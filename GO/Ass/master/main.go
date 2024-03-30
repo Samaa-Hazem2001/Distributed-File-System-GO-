@@ -24,6 +24,7 @@ var (
 	lock        sync.RWMutex
 	machineMap  map[int]Machine
 	filenameMap map[string][]string
+	replicationMap map[string]map[string]bool 
 )
 
 type PortInfo struct {
@@ -75,6 +76,7 @@ func findNonBusyPort() (int, string, error) {
 		if machine.IsAlive {
 			for i, port := range machine.Ports {
 				if !port.Busy {
+					//later: look on the machineMap here?
 					machineMap[machine.ID].Ports[i].Busy = true
 					return port.Port, machine.IP, nil
 				}
@@ -176,6 +178,7 @@ func setPortStatus(DataNodeIp string, portNumber int, isBusy bool) error {
 		if machine.IP == DataNodeIp {
 			for i, port := range machine.Ports {
 				if port.Port == portNumber {
+					//later: look on the machineMap here?
 					machine.Ports[i].Busy = isBusy
 					machineMap[machine.ID] = machine
 					return nil
@@ -188,13 +191,22 @@ func setPortStatus(DataNodeIp string, portNumber int, isBusy bool) error {
 }
 
 func (s *KeepersServer) Alive(ctx context.Context, req *pb.AliveRequest) (*pb.AliveResponse, error) {
-	keeperId := req.GetKeeperId()
+	keeperIP := req.GetDataNodeIp()
+
+	//from ip get id
+	var keeperId int32
+	for _, machine := range machineMap {
+		if machine.IP == keeperIP {
+			keeperId = machine.ID
+			break
+		}
+	}
 
 	aliveCount[keeperId] += 1
 
 	//for debuging:-
 	// Print the result
-	fmt.Println("keeperId :", keeperId)
+	fmt.Println("keeperId :", keeperId, " and Ip : ", keeperIP, " has come alive.")
 
 	return &pb.AliveResponse{}, nil
 }
@@ -243,6 +255,60 @@ func AliveChecker(numKeepers int32) {
 	}
 }
 
+func (s *KeepersServer) ReplicationDone(ctx context.Context, req *pb.ReplicationDoneRequest) (*pb.ReplicationDoneResponse, error) {
+	keeperIp := req.GetDataNodeIp()
+	portNum := req.GetPortNum()
+	fileName := req.GetFileName()
+
+	//for debuging:-
+	// Print the result
+	fmt.Println("keeperIp :", keeperId," finished the replication for file : ", fileName)
+
+	replicationMap[fileName][keeperIp] = true
+
+	//mark this "portNum" as an avialble port to the machine with ip = keeperIp
+	err := setPortStatus(keeperIp, int(portNum), false)
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+
+	return &pb.ReplicationDoneResponse{}, nil
+}
+
+func replicationFinishChecker() {
+	ticker := time.NewTicker(28 * time.Second) //NOTE: Create a ticker that ticks every 28 seconds to break the tie with 10 seconds of the replicationchecker
+	defer ticker.Stop()                       // Stop the ticker when the function returns
+
+	for {
+		select {
+		case <-ticker.C:
+
+			for fileName, machine_lists := range replicationMap { //iterate over files
+
+				// for debuging:
+				fmt.Printf("fileName: %s, machine_lists: %d\n", fileName, machine_lists)
+				
+				for currentIp, done := range machine_lists { //iterate over machines
+
+					if done {
+						continue
+					}
+
+					//later: if not done, then go to the lookup table and delete that machine for this file name
+
+					
+				}
+
+			}
+
+			//reset replicationMap
+			replicationMap = map[string]map[string]bool 
+			
+			// Add other cases if you need to handle other channels
+		}
+	}
+}
+
 func replicationChecker() {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -268,6 +334,12 @@ func replicationChecker() {
 					notifyMachineDataTransfer(sourceMachineIp, destinationMachineIp, filename)
 					machineIpsLen++
 					filenameMap[filename] = append(filenameMap[filename], destinationMachineIp)
+
+					//samaa:
+					if replicationMap[filename] == nil {
+						replicationMap[filename] = make(map[string]bool)
+					}
+					replicationMap[filename][destinationMachineIp] = false
 				}
 			}
 		}
@@ -292,8 +364,30 @@ func selectMachineToCopyTo(filename string) (string, error) {
 	return "", fmt.Errorf("failed to find machine")
 }
 func notifyMachineDataTransfer(sourceMachineIp string, destinationMachineIp string, filename string) error {
-	// later: change this
-	conn, err := grpc.Dial(sourceMachineIp+":3000", grpc.WithInsecure())
+	//later: from the ip get the id
+	var machineID int
+	for _, machine := range machineMap {
+		if machine.IP == sourceMachineIp {
+			machineID = machine.ID
+			break
+		}
+	}
+
+	var nonBusyPort int
+	machine = machineMap[machineID]
+	//later: look on the machineMap here?
+	if machine.IsAlive { //later: do we have to delete this unnecessary condition?
+		for i, port := range machine.Ports {
+			if !port.Busy {
+				machineMap[machineID].Ports[i].Busy = true
+				nonBusyPort = port.Port
+				break
+			}
+		}
+	}
+
+
+	conn, err := grpc.Dial(sourceMachineIp + ":"+strconv.Itoa(int(nonBusyPort)), grpc.WithInsecure())
 	if err != nil {
 		return fmt.Errorf("failed to connect: %v", err)
 	}
@@ -309,6 +403,13 @@ func notifyMachineDataTransfer(sourceMachineIp string, destinationMachineIp stri
 	if err != nil {
 		return fmt.Errorf("failed to notify machine for data transfer: %v", err)
 	}
+
+	//remark the nonBusyPort of the source as non busy again
+	err := setPortStatus(sourceMachineIp, int(nonBusyPort), false)
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+
 	fmt.Println("Done")
 
 	return nil
@@ -342,6 +443,8 @@ func main() {
 		return
 	}
 	machineMap = make(map[int]Machine)
+	
+	//later: look on the machineMap here?
 	for _, machine := range config.Machines {
 		machineMap[machine.ID] = machine
 		machine.FileNames = make([]string, 0)
@@ -416,6 +519,7 @@ func main() {
 	//----- Alive check-----//
 	go AliveChecker(numKeepers)
 	go replicationChecker()
+	go replicationFinishChecker()
 
 	//fmt.Println("Server started. again")
 

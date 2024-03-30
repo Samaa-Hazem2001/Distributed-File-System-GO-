@@ -45,7 +45,7 @@ message UploadFileRequest {
     int32 client_port_num = 4;
 
     int32 port_num = 5;
-    string data_node_ip = 6;
+    //string data_node_ip = 6;
 
 }
 // later: if there is a respose from the machine to client or the client will take the response from master only(valid to send empty response??)  
@@ -99,7 +99,7 @@ service RepExstService {
     rpc RepExst(RepExstRequest) returns (RepExstResponse);
 }
 
-//----------  Keeper Done (step5) and Alive  -----------//
+//----------  Keeper Done (step5) and Alive and replicationDone -----------//
 //from mashine to master
 
 message KeeperDoneRequest {
@@ -123,9 +123,20 @@ message KeeperDoneRequest {
 message KeeperDoneResponse {  
 }
 
-//? wla n el master to machine ??
+message ReplicationDoneRequest {
+    //NOTE: we will not notify the client about the replication finishing
+    string file_name = 1;
+    int32 port_num = 2; //to make the master mark this ort for this machine as "not busy"
+    string data_node_ip = 3;
+    //int32 keeper_id = 7; 
+}
+
+message ReplicationDoneResponse {  
+}
+
 message AliveRequest {
-    int32 keeper_id = 1;
+    string data_node_ip = 1;
+    //int32 keeper_id = 1;
 }
 
 message AliveResponse {
@@ -134,6 +145,7 @@ message AliveResponse {
 
 service KeepersService {
     rpc KeeperDone(KeeperDoneRequest) returns (KeeperDoneResponse);
+    rpc ReplicationDone(ReplicationDoneRequest) returns (ReplicationDoneResponse);
     rpc Alive(AliveRequest) returns (AliveResponse);
 }
 

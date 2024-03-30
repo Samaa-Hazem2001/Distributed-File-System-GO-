@@ -38,6 +38,8 @@ var callKeeperDone func(
 	uploadPortNum int32,
 )
 
+var myIp string = "localhost"
+
 // func (s *UploadDownloadServer) Upload(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {
 // 	// text := req.GetText()
 // 	port := int32(8080) //later: change it to be an unbusy port
@@ -60,7 +62,7 @@ func (s *UploadDownloadServer) UploadFile(ctx context.Context, req *pb.UploadFil
 		int32(len(req.File)),
 		req.ClientIp,
 		req.ClientPortNum,
-		req.DataNodeIp,
+		// req.DataNodeIp,
 		req.PortNum,
 	)
 
@@ -187,13 +189,6 @@ func main() {
 		if err := s.Serve(lis1); err != nil {
 			fmt.Println("failed to serve:", err)
 		}
-		// else if isUpload == true {
-		// 	resp, err := c.KeeperDone(context.Background(), &pb.KeeperDoneRequest{FileName: filename, FileSize: int32(fileSize), PortNum: uploadPortNum, DataNodeIp: uploadIP, KeeperId: int32(KeeperId)})
-		// 	if err != nil {
-		// 		fmt.Println("Error calling KeeperDone:", err, resp)
-		// 	}
-		// }
-		// fmt.Println("isUpload = ",isUpload )
 
 	}()
 	go func() {
@@ -201,26 +196,12 @@ func main() {
 		if err := s.Serve(lis2); err != nil {
 			fmt.Println("failed to serve:", err)
 		}
-		// else if isUpload == true  {
-		// 	resp, err := c.KeeperDone(context.Background(), &pb.KeeperDoneRequest{FileName: filename, FileSize: int32(fileSize), PortNum: uploadPortNum, DataNodeIp: uploadIP, KeeperId: int32(KeeperId)})
-		// 	if err != nil {
-		// 		fmt.Println("Error calling KeeperDone:", err, resp)
-		// 	}
-		// }
-		// fmt.Println("isUpload = ",isUpload )
 	}()
 	go func() {
 		//fmt.Println("inside go " )
 		if err := s.Serve(lis3); err != nil {
 			fmt.Println("failed to serve:", err)
 		}
-		// else if isUpload == true  {
-		// 	resp, err := c.KeeperDone(context.Background(), &pb.KeeperDoneRequest{FileName: filename, FileSize: int32(fileSize), PortNum: uploadPortNum, DataNodeIp: uploadIP, KeeperId: int32(KeeperId)})
-		// 	if err != nil {
-		// 		fmt.Println("Error calling KeeperDone:", err, resp)
-		// 	}
-		// }
-		// fmt.Println("isUpload = ",isUpload )
 	}()
 	go func() {
 		lis, err := net.Listen("tcp", ":50051")
@@ -259,7 +240,7 @@ func main() {
 		fileSize int32,
 		clientIp string,
 		clientPort int32,
-		uploadIP string,
+		// uploadIP string,
 		uploadPortNum int32,
 	) {
 		fmt.Println("This is a nested function")
@@ -269,7 +250,7 @@ func main() {
 				FileSize:      int32(fileSize),
 				ClientIp:      clientIp,
 				ClientPortNum: clientPort,
-				DataNodeIp:    uploadIP,
+				DataNodeIp:    myIp,
 				PortNum:       uploadPortNum,
 				//KeeperId: int32(KeeperId)
 			})
@@ -299,7 +280,7 @@ func main() {
 			select {
 			case <-ticker.C:
 				fmt.Println("Alive Ping!!")
-				resp, err := c.Alive(context.Background(), &pb.AliveRequest{KeeperId: int32(1)})
+				resp, err := c.Alive(context.Background(), &pb.AliveRequest{DataNodeIp:myIp})
 				if err != nil {
 					fmt.Println("Error calling KeeperDone:", err, resp)
 					return

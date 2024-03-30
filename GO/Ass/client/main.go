@@ -80,7 +80,6 @@ func main() {
 
 		// later: uncomment this line
 		conn2, err := grpc.Dial(resp.GetDataNodeIp()+":"+strconv.Itoa(int(resp.GetPortNum())), grpc.WithInsecure())
-		// conn2, err := grpc.Dial("localhost:3000", grpc.WithInsecure())
 		if err != nil {
 			fmt.Println("did not connect:", err)
 			return
@@ -100,7 +99,6 @@ func main() {
 			FileName:      filename,
 			ClientIp:      clientIp,
 			PortNum:       resp.GetPortNum(),
-			DataNodeIp:    resp.GetDataNodeIp(),
 			ClientPortNum: clientPort,
 		})
 		if err != nil {
