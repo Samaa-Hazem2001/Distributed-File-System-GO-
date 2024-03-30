@@ -206,7 +206,7 @@ func (s *KeepersServer) Alive(ctx context.Context, req *pb.AliveRequest) (*pb.Al
 
 	//for debuging:-
 	// Print the result
-	fmt.Println("keeperId :", keeperId, " and Ip : ", keeperIP, " has come alive.")
+	fmt.Println("keeperIP :", keeperIP,  " has come alive.")
 
 	return &pb.AliveResponse{}, nil
 }
@@ -324,13 +324,14 @@ func replicationChecker() {
 				machineIpsLen := len(machineIps)
 
 				for machineIpsLen < 3 {
+					//later: for testing in group of laptops , uncomment this 
 					// destinationMachineIp, destinationMachineId, err := selectMachineToCopyTo(filename) later un comment this
-					_, destinationMachineId, err := selectMachineToCopyTo(filename)
+					_ , destinationMachineId,destMachinePort, err := selectMachineToCopyTo(filename)
 					destinationMachineIp := "localhost"
 					if err != nil {
 						fmt.Println("Error: ", err)
 					}
-					notifyMachineDataTransfer(sourceMachineIp, destinationMachineIp, filename)
+					notifyMachineDataTransfer(sourceMachineIp, destinationMachineIp, destMachinePort, filename)
 					machineIpsLen++
 					filenameMap[filename] = append(filenameMap[filename], destinationMachineIp)
 
@@ -359,13 +360,15 @@ func selectMachineToCopyTo(filename string) (string, int, error) {
 				}
 			}
 			if !found {
-				return machine.IP, machine.ID, nil
+				//later:asmaa change the dheck for a machine to have unbusy port
+				//later:asmaa change the port num
+				return machine.IP, machine.ID, 3000, nil
 			}
 		}
 	}
 	return "", 0, fmt.Errorf("failed to find machine")
 }
-func notifyMachineDataTransfer(sourceMachineIp string, destinationMachineIp string, filename string) error {
+func notifyMachineDataTransfer(sourceMachineIp string, destinationMachineIp string, destMachinePort int32, filename string) error {
 	//later: from the ip get the id
 	var machineID int
 	for _, machine := range machineMap {
@@ -376,7 +379,7 @@ func notifyMachineDataTransfer(sourceMachineIp string, destinationMachineIp stri
 	}
 
 	var nonBusyPort int
-	machine = machineMap[machineID]
+	machine := machineMap[machineID]
 	//later: look on the machineMap here?
 	if machine.IsAlive { //later: do we have to delete this unnecessary condition?
 		for i, port := range machine.Ports {
@@ -399,6 +402,7 @@ func notifyMachineDataTransfer(sourceMachineIp string, destinationMachineIp stri
 	_, err = client.NotifyMachineDataTransfer(context.Background(), &pb.NotifyMachineDataTransferRequest{
 		SourceIp: sourceMachineIp,
 		DistIp:   destinationMachineIp,
+		PortNum: destMachinePort,
 		FileName: filename,
 	})
 	if err != nil {

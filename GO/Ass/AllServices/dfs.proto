@@ -61,7 +61,8 @@ service UploadDownloadFileService {
 message notifyMachineDataTransferRequest {
     string source_ip = 1;
     string dist_ip = 2;
-    string file_name = 3;
+    int32 port_num = 3;
+    string file_name = 4;
 } 
 message notifyMachineDataTransferResponse {
 } 
@@ -74,6 +75,7 @@ service NotifyMachineDataTransferService {
 message TransferFileUploadRequest {
     string file_name = 1;
     bytes file = 2;
+    int32 port_num =3;
 }
 message TransferFileUploadResponse {
     bool success = 1;

@@ -38,6 +38,11 @@ var callKeeperDone func(
 	uploadPortNum int32,
 )
 
+var callReplicationDone func(
+	filename string,
+	destPortNum int32,
+)
+
 var myIp string = "localhost"
 
 // func (s *UploadDownloadServer) Upload(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {
@@ -91,13 +96,14 @@ func (s *NotifyMachineDataTransferServer) NotifyMachineDataTransfer(ctx context.
 	filename := req.GetFileName()
 	sourceMachineIp := req.GetSourceIp()
 	destinationMachineIp := req.GetDistIp()
+	portNum := req.GetPortNum()
 
 	fmt.Printf("Received Notification to upload file: %s from machine %s to machine %s\n", filename, sourceMachineIp, destinationMachineIp)
 	fileContent, err := ioutil.ReadFile(filename)
 	if err != nil {
 		log.Fatalf("Failed to read file: %v", err)
 	}
-	err = sendFileData(destinationMachineIp, filename, fileContent)
+	err = sendFileData(destinationMachineIp, portNum,filename, fileContent)
 	if err != nil {
 		log.Fatalf("Failed to send file: %v", err)
 	}
@@ -107,16 +113,21 @@ func (s *NotifyMachineDataTransferServer) NotifyMachineDataTransfer(ctx context.
 func (s *TransferFileServiceServer) TransferFile(ctx context.Context, req *pb.TransferFileUploadRequest) (*pb.TransferFileUploadResponse, error) {
 	filename := req.GetFileName()
 	fileData := req.GetFile()
+	portNum := req.GetPortNum()
 
 	err := ioutil.WriteFile(filename+"2.mp4", fileData, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("error writing file: %v", err)
 	}
+	callReplicationDone(
+		filename,
+		portNum,
+	)
 
 	return &pb.TransferFileUploadResponse{Success: true, Message: "File transferred successfully"}, nil
 }
-func sendFileData(destinationMachineIp string, filename string, fileData []byte) error {
-	conn, err := grpc.Dial(destinationMachineIp+":50051", grpc.WithInsecure())
+func sendFileData(destinationMachineIp string,destPortNum int32  , filename string, fileData []byte) error {
+	conn, err := grpc.Dial(destinationMachineIp+":"+strconv.Itoa(int(destPortNum)), grpc.WithInsecure())
 	if err != nil {
 		return err
 	}
@@ -127,6 +138,7 @@ func sendFileData(destinationMachineIp string, filename string, fileData []byte)
 	_, err = client.TransferFile(context.Background(), &pb.TransferFileUploadRequest{
 		FileName: filename,
 		File:     fileData,
+		PortNum: destPortNum,
 	})
 	if err != nil {
 		return err
@@ -252,6 +264,23 @@ func main() {
 				ClientPortNum: clientPort,
 				DataNodeIp:    myIp,
 				PortNum:       uploadPortNum,
+				//KeeperId: int32(KeeperId)
+			})
+		if err != nil {
+			fmt.Println("Error calling KeeperDone:", err, resp)
+		}
+	}
+
+	callReplicationDone = func(
+		filename string,
+		destPortNum int32,
+	) {
+		fmt.Println("This is a nested function for replication")
+		resp, err := c.ReplicationDone(context.Background(),
+			&pb.ReplicationDoneRequest{
+				FileName:      filename,
+				DataNodeIp:    myIp,
+				PortNum:       destPortNum,
 				//KeeperId: int32(KeeperId)
 			})
 		if err != nil {
