@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"strconv"
 	"sync"
 	"time"
-	"strconv"
 
 	//"strings"
 
@@ -23,7 +23,7 @@ var (
 	aliveCount  map[int32]int // Define aliveCount as a global variable
 	lock        sync.RWMutex
 	machineMap  map[int]Machine
-	filenameMap map[string][]int
+	filenameMap map[string][]string
 )
 
 type PortInfo struct {
@@ -114,7 +114,7 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 	clientPort := req.GetClientPortNum()
 	clientIp := req.GetClientIp()
 
-	//ConfirmClient(clientIp, clientPort) 
+	//ConfirmClient(clientIp, clientPort)
 
 	// later: what about ip? is it the same as Id
 	err := setPortStatus(DataNodeIp, int(freePortNum), false)
@@ -166,7 +166,7 @@ func ConfirmClient(ip string, port int32) {
 
 	resp, err := c.DoneUp(context.Background(), &pb.DoneUpRequest{})
 	if err != nil {
-		fmt.Println("Error calling DoneUp:", err,resp)
+		fmt.Println("Error calling DoneUp:", err, resp)
 		return
 	}
 
@@ -253,44 +253,47 @@ func replicationChecker() {
 
 			filenameMap = generateFilenameMap()
 
-			for filename, machineIDs := range filenameMap {
-				fmt.Printf("%s: %v\n", filename, machineIDs)
-				sourceMachineId := machineIDs[0]
-				machineIDsLen := len(machineIDs)
+			for filename, machineIps := range filenameMap {
+				fmt.Printf("%s: %v\n", filename, machineIps)
+				sourceMachineIp := machineIps[0]
+				machineIpsLen := len(machineIps)
 
-				for machineIDsLen < 3 {
-					destinationMachineId, err := selectMachineToCopyTo(filename)
+				for machineIpsLen < 3 {
+					// destinationMachineIp, err := selectMachineToCopyTo(filename) later un comment this
+					_, err := selectMachineToCopyTo(filename)
+					destinationMachineIp := "localhost"
 					if err != nil {
 						fmt.Println("Error: ", err)
 					}
-					notifyMachineDataTransfer(sourceMachineId, destinationMachineId)
-					machineIDsLen++
-					filenameMap[filename] = append(filenameMap[filename], destinationMachineId)
+					notifyMachineDataTransfer(sourceMachineIp, destinationMachineIp, filename)
+					machineIpsLen++
+					filenameMap[filename] = append(filenameMap[filename], destinationMachineIp)
 				}
 			}
 		}
 	}
 }
-func selectMachineToCopyTo(filename string) (int, error) {
-	machineIDs := filenameMap[filename]
+func selectMachineToCopyTo(filename string) (string, error) {
+	machineIps := filenameMap[filename]
 	for _, machine := range machineMap {
 		if machine.IsAlive {
 			found := false
-			for _, id := range machineIDs {
-				if id == machine.ID {
+			for _, ip := range machineIps {
+				if ip == machine.IP {
 					found = true
 					break
 				}
 			}
 			if !found {
-				return machine.ID, nil
+				return machine.IP, nil
 			}
 		}
 	}
-	return -1, fmt.Errorf("failed to find machine")
+	return "", fmt.Errorf("failed to find machine")
 }
-func notifyMachineDataTransfer(sourceMachineId int, destinationMachineId int) error {
-	conn, err := grpc.Dial("localhost:3000", grpc.WithInsecure())
+func notifyMachineDataTransfer(sourceMachineIp string, destinationMachineIp string, filename string) error {
+	// later: change this
+	conn, err := grpc.Dial(sourceMachineIp+":3000", grpc.WithInsecure())
 	if err != nil {
 		return fmt.Errorf("failed to connect: %v", err)
 	}
@@ -299,8 +302,9 @@ func notifyMachineDataTransfer(sourceMachineId int, destinationMachineId int) er
 	client := pb.NewNotifyMachineDataTransferServiceClient(conn)
 
 	_, err = client.NotifyMachineDataTransfer(context.Background(), &pb.NotifyMachineDataTransferRequest{
-		SourceId: int32(sourceMachineId),
-		DistId:   int32(destinationMachineId),
+		SourceIp: sourceMachineIp,
+		DistIp:   destinationMachineIp,
+		FileName: filename,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to notify machine for data transfer: %v", err)
@@ -309,16 +313,16 @@ func notifyMachineDataTransfer(sourceMachineId int, destinationMachineId int) er
 
 	return nil
 }
-func generateFilenameMap() map[string][]int {
-	filenameMap := make(map[string][]int)
+func generateFilenameMap() map[string][]string {
+	filenameMap := make(map[string][]string)
 
 	for _, machine := range machineMap {
 		if machine.IsAlive {
-			machineIDs := make(map[int]bool)
+			machineIps := make(map[int]bool)
 			for _, filename := range machine.FileNames {
-				if !machineIDs[machine.ID] {
-					filenameMap[filename] = append(filenameMap[filename], machine.ID)
-					machineIDs[machine.ID] = true
+				if !machineIps[machine.ID] {
+					filenameMap[filename] = append(filenameMap[filename], machine.IP)
+					machineIps[machine.ID] = true
 				}
 			}
 		}

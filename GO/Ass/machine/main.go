@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
-	"time"
 	"strconv"
+	"time"
 
 	//"net"
 	//"strings"
@@ -21,9 +21,12 @@ type UploadDownloadServer struct {
 	pb.UnimplementedUploadDownloadFileServiceServer
 }
 
-
 type NotifyMachineDataTransferServer struct {
 	pb.UnimplementedNotifyMachineDataTransferServiceServer
+}
+
+type TransferFileServiceServer struct {
+	pb.UnimplementedTransferFileServiceServer
 }
 
 var callKeeperDone func(
@@ -83,22 +86,63 @@ func (s *UploadDownloadServer) DownloadFile(ctx context.Context, req *pb.Downloa
 }
 
 func (s *NotifyMachineDataTransferServer) NotifyMachineDataTransfer(ctx context.Context, req *pb.NotifyMachineDataTransferRequest) (*pb.NotifyMachineDataTransferResponse, error) {
-	sourceID := req.GetSourceId()
-	fmt.Printf("Notification received to transfer data from source ID: %d\n", sourceID)
+	filename := req.GetFileName()
+	sourceMachineIp := req.GetSourceIp()
+	destinationMachineIp := req.GetDistIp()
+
+	fmt.Printf("Received Notification to upload file: %s from machine %s to machine %s\n", filename, sourceMachineIp, destinationMachineIp)
+	fileContent, err := ioutil.ReadFile(filename)
+	if err != nil {
+		log.Fatalf("Failed to read file: %v", err)
+	}
+	err = sendFileData(destinationMachineIp, filename, fileContent)
+	if err != nil {
+		log.Fatalf("Failed to send file: %v", err)
+	}
 	return &pb.NotifyMachineDataTransferResponse{}, nil
 }
 
+func (s *TransferFileServiceServer) TransferFile(ctx context.Context, req *pb.TransferFileUploadRequest) (*pb.TransferFileUploadResponse, error) {
+	filename := req.GetFileName()
+	fileData := req.GetFile()
+
+	err := ioutil.WriteFile(filename+"2.mp4", fileData, 0644)
+	if err != nil {
+		return nil, fmt.Errorf("error writing file: %v", err)
+	}
+
+	return &pb.TransferFileUploadResponse{Success: true, Message: "File transferred successfully"}, nil
+}
+func sendFileData(destinationMachineIp string, filename string, fileData []byte) error {
+	conn, err := grpc.Dial(destinationMachineIp+":50051", grpc.WithInsecure())
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	client := pb.NewTransferFileServiceClient(conn)
+
+	_, err = client.TransferFile(context.Background(), &pb.TransferFileUploadRequest{
+		FileName: filename,
+		File:     fileData,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
 func main() {
 	// isUpload = false
 	//some definations://later: hnktbhm manual kda wla eh?
-	var keeperPort1 int32 = 8000; 
-	var keeperPort2 int32 = 8001;
-	var keeperPort3 int32 = 8002;
-	var masterPortToKeeper int32 = 8082;
+	var keeperPort1 int32 = 8000
+	var keeperPort2 int32 = 8001
+	var keeperPort3 int32 = 8002
+	var masterPortToKeeper int32 = 8082
+	// var masterIp string = "172.28.177.163"
 	var masterIp string = "localhost"
 
 	//------- act as client (client to master)  ------//
-	conn, err := grpc.Dial(masterIp + ":" + strconv.Itoa(int(masterPortToKeeper)), grpc.WithInsecure()) //<=later //to asmaa : replace with final IP and Port of the master
+	conn, err := grpc.Dial(masterIp+":"+strconv.Itoa(int(masterPortToKeeper)), grpc.WithInsecure()) //<=later //to asmaa : replace with final IP and Port of the master
 	if err != nil {
 		fmt.Println("did not connect to the master:", err)
 		return
@@ -106,8 +150,7 @@ func main() {
 	defer conn.Close()
 	c := pb.NewKeepersServiceClient(conn)
 	// KeeperId := 0 //later: remove it from proto file and here ?
-	
-	
+
 	//------- act as sever (server to client or other keeper -for replication-) ------//
 
 	// //later: how to listen to multiple ports ? and call the same function for any connection of them?
@@ -116,31 +159,30 @@ func main() {
 	pb.RegisterUploadDownloadFileServiceServer(s, &UploadDownloadServer{})
 
 	// listener 1
-	lis1, err := net.Listen("tcp", ":" + strconv.Itoa(int(keeperPort1)))
+	lis1, err := net.Listen("tcp", ":"+strconv.Itoa(int(keeperPort1)))
 	if err != nil {
 		fmt.Println("failed to listen:", err)
 		return
 	}
-	fmt.Println("Server started. Listening on port = ",keeperPort1)
+	fmt.Println("Server started. Listening on port = ", keeperPort1)
 
 	// listener 2
-	lis2, err := net.Listen("tcp", ":" + strconv.Itoa(int(keeperPort2)))
+	lis2, err := net.Listen("tcp", ":"+strconv.Itoa(int(keeperPort2)))
 	if err != nil {
 		fmt.Println("failed to listen:", err)
 		return
 	}
-	fmt.Println("Server started. Listening on port = ",keeperPort2)
-		
-	// listener 3
-	lis3, err := net.Listen("tcp", ":" + strconv.Itoa(int(keeperPort3)))
-	if err != nil {
-		fmt.Println("failed to listen:", err)
-		return
-	}
-	fmt.Println("Server started. Listening on port = ",keeperPort3)
-		
+	fmt.Println("Server started. Listening on port = ", keeperPort2)
 
-	go func() {	
+	// listener 3
+	lis3, err := net.Listen("tcp", ":"+strconv.Itoa(int(keeperPort3)))
+	if err != nil {
+		fmt.Println("failed to listen:", err)
+		return
+	}
+	fmt.Println("Server started. Listening on port = ", keeperPort3)
+
+	go func() {
 		//fmt.Println("inside go " )
 		if err := s.Serve(lis1); err != nil {
 			fmt.Println("failed to serve:", err)
@@ -180,8 +222,20 @@ func main() {
 		// }
 		// fmt.Println("isUpload = ",isUpload )
 	}()
+	go func() {
+		lis, err := net.Listen("tcp", ":50051")
+		if err != nil {
+			log.Fatalf("Failed to listen: %v", err)
+		}
+		s := grpc.NewServer()
+		pb.RegisterTransferFileServiceServer(s, &TransferFileServiceServer{})
+		log.Println("server started. Listening on port 50051")
+		if err := s.Serve(lis); err != nil {
+			log.Fatalf("Failed to serve: %v", err)
+		}
+	}()
 
-	//we assume we will not call "keeperDone" after finishing downloading like in uploading 
+	//we assume we will not call "keeperDone" after finishing downloading like in uploading
 
 	// Register the gRPC service implementation
 	s22 := grpc.NewServer()
@@ -192,39 +246,37 @@ func main() {
 		fmt.Println("failed to listen:", err)
 		return
 	}
-	fmt.Println("Server started. Listening on port 3000...")
-		
+	fmt.Println("Server started. Listening on port 3000")
+
 	go func() {
 		if err := s22.Serve(lisMtoM); err != nil {
 			fmt.Println("failed to serve:", err)
 		}
 	}()
 
-	callKeeperDone  = func(
+	callKeeperDone = func(
 		filename string,
 		fileSize int32,
 		clientIp string,
 		clientPort int32,
 		uploadIP string,
 		uploadPortNum int32,
-		) {
+	) {
 		fmt.Println("This is a nested function")
 		resp, err := c.KeeperDone(context.Background(),
-								 &pb.KeeperDoneRequest{
-									FileName: filename, 
-									FileSize: int32(fileSize),
-									ClientIp: clientIp,
-									ClientPortNum: clientPort,
-									DataNodeIp: uploadIP,
-									PortNum: uploadPortNum,
-									//KeeperId: int32(KeeperId)
-									})
+			&pb.KeeperDoneRequest{
+				FileName:      filename,
+				FileSize:      int32(fileSize),
+				ClientIp:      clientIp,
+				ClientPortNum: clientPort,
+				DataNodeIp:    uploadIP,
+				PortNum:       uploadPortNum,
+				//KeeperId: int32(KeeperId)
+			})
 		if err != nil {
 			fmt.Println("Error calling KeeperDone:", err, resp)
 		}
 	}
-
-	
 
 	// // Concurrently send KeepersService requests to master
 	// go func() {
@@ -246,8 +298,8 @@ func main() {
 		for {
 			select {
 			case <-ticker.C:
-				// fmt.Println("Alive Ping!!")
-				resp, err := c.Alive(context.Background(), &pb.AliveRequest{KeeperId: int32(0)})
+				fmt.Println("Alive Ping!!")
+				resp, err := c.Alive(context.Background(), &pb.AliveRequest{KeeperId: int32(1)})
 				if err != nil {
 					fmt.Println("Error calling KeeperDone:", err, resp)
 					return

@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"strconv"
 	"net"
+	"strconv"
 
 	pb "Ass/AllServices" // Import the generated package
 
 	"google.golang.org/grpc"
 )
+
 type DoneUpServer struct {
 	pb.UnimplementedDoneUpServiceServer
 }
@@ -24,9 +25,11 @@ func main() {
 	//later:assume that the client connection can be one upload or one download only
 
 	//some definations://later: hnktbhm manual kda wla eh?
-	var clientPort int32 = 4000; //later: hnktbha manual kda wla eh?
+	var clientPort int32 = 4000 //later: hnktbha manual kda wla eh?
+	// var clientIp string = "172.28.177.150"
 	var clientIp string = "localhost"
-	var masterPortToClient int32 = 8080;
+	var masterPortToClient int32 = 8081
+	// var masterIp string = "172.28.177.163"
 	var masterIp string = "localhost"
 
 	// Read input from user
@@ -34,7 +37,8 @@ func main() {
 	var upORdown int
 	fmt.Scanln(&upORdown)
 
-	conn, err := grpc.Dial(masterIp + ":" + strconv.Itoa(int(masterPortToClient)), grpc.WithInsecure()) //later:changer it to master anf d port and ip from config file //to asmaa
+	conn, err := grpc.Dial(masterIp+":"+strconv.Itoa(int(masterPortToClient)), grpc.WithInsecure()) //later:changer it to master anf d port and ip from config file //to asmaa
+
 	if err != nil {
 		fmt.Println("did not connect:", err)
 		return
@@ -44,21 +48,20 @@ func main() {
 
 	if upORdown == 1 {
 		//initialize the listener of the "success" request from the master
-		lisDone, err := net.Listen("tcp",":" + strconv.Itoa(int(clientPort)) )
+		lisDone, err := net.Listen("tcp", ":"+strconv.Itoa(int(clientPort)))
 		if err != nil {
 			fmt.Println("failed to listen in the client port (client side):", err)
 			return
 		}
 		sDone := grpc.NewServer()
 		pb.RegisterDoneUpServiceServer(sDone, &DoneUpServer{})
-		fmt.Println("Client started. Listening on port = ",clientPort)
-
+		fmt.Println("Client started. Listening on port = ", clientPort)
 
 		//---------  upload file request to master  ---------//
 		// Call the RPC method
 		resp, err := c.Upload(context.Background(), &pb.UpdateRequest{})
 		if err != nil {
-			fmt.Println("Error calling UploadFile:", err)
+			fmt.Println("Error calling Upload:", err)
 			return
 		}
 		// Print the result
@@ -85,7 +88,7 @@ func main() {
 		defer conn2.Close()
 		c2 := pb.NewUploadDownloadFileServiceClient(conn2)
 		// later: uncomment this line
-		fileContent, err := ioutil.ReadFile(filepath+ "/" + filename)
+		fileContent, err := ioutil.ReadFile(filepath + "/" + filename)
 		// fileContent, err := ioutil.ReadFile("C:/Users/samaa/Downloads")
 		if err != nil {
 			log.Fatalf("Failed to read file: %v", err)
@@ -93,11 +96,11 @@ func main() {
 
 		// Send the file content to the server
 		_, err = c2.UploadFile(context.Background(), &pb.UploadFileRequest{
-			File:       fileContent,
-			FileName:   filename,
-			ClientIp:   clientIp,
-			PortNum:    resp.GetPortNum(),
-			DataNodeIp: resp.GetDataNodeIp(),
+			File:          fileContent,
+			FileName:      filename,
+			ClientIp:      clientIp,
+			PortNum:       resp.GetPortNum(),
+			DataNodeIp:    resp.GetDataNodeIp(),
 			ClientPortNum: clientPort,
 		})
 		if err != nil {
@@ -106,13 +109,16 @@ func main() {
 
 		// fmt.Println("File uploaded successfully")
 		//wait for the requst with success that will be send for the uploaded file from the master
-		//we assume that will happen only in uploading 
+		//we assume that will happen only in uploading
 		//go func() {
-			if err := sDone.Serve(lisDone); err != nil {
-				fmt.Println("failed to serve:", err)
-			} else {
-				fmt.Println("File uploaded successfully , confirmed from master")
-			}
+		fmt.Println("before serve")
+		err = sDone.Serve(lisDone)
+		fmt.Println("after serve")
+		if err != nil {
+			fmt.Println("failed to serve:", err)
+			return
+		}
+		fmt.Println("File uploaded successfully , confirmed from master")
 		//}()
 
 		// // later: take the file from client :...
@@ -121,7 +127,6 @@ func main() {
 		// //parse el file 34an ytb3t 1000 bytes for ex
 		// //NOTE: you have to mark the end of the file chunks transfaring , you
 
-		
 	} else { //later: change this to "else"
 		//---------  download file request to master  ---------//
 		// Call the RPC method
@@ -170,7 +175,7 @@ func main() {
 
 	}
 
-//  conn.Close()
+	//  conn.Close()
 
 }
 
