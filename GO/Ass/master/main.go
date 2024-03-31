@@ -122,7 +122,7 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 	clientPort := req.GetClientPortNum()
 	clientIp := req.GetClientIp()
 
-	//ConfirmClient(clientIp, clientPort)
+	// ConfirmClient(clientIp, clientPort)
 
 	// later: what about ip? is it the same as Id
 	err := setPortStatus(DataNodeIp, int(freePortNum), false)
@@ -353,7 +353,6 @@ func replicationChecker() {
 	for {
 		select {
 		case <-ticker.C:
-			fmt.Println("inside replicationChecker")
 
 			currentTime := time.Now()
 			elapsedTime := currentTime.Sub(startTime)
@@ -387,16 +386,20 @@ func replicationChecker() {
 
 			//for debug:
 			fmt.Println("replicationChecker :", (*replicationMap),"with ticker_int%3 = ",ticker_int%3)
+			fmt.Println("inside replicationChecker")
 
 
 			filenameMap = generateFilenameMap()
 
 			for filename, machineIps := range filenameMap {
+				fmt.Println("inside filenameMap loop")
+
 				fmt.Printf("%s: %v\n", filename, machineIps)
 				sourceMachineIp := machineIps[0]
 				machineIpsLen := len(machineIps)
 
 				for machineIpsLen < 3 {
+					fmt.Println("inside machineIpsLen < 3 loop")
 					//later: for testing in group of laptops , uncomment this
 					// destinationMachineIp, destinationMachineId, destMachinePort, err := selectMachineToCopyTo(filename) later un comment this
 					_, destinationMachineId, destMachinePort, err := selectMachineToCopyTo(filename)
@@ -585,7 +588,7 @@ func main() {
 
 	// Start the gRPC server in a separate Goroutine
 	go func() {
-		fmt.Println("Client server started. Listening on port 8080...")
+		fmt.Println("Client server started. Listening on port 8081...")
 		if err := sUp.Serve(lisUp); err != nil {
 			fmt.Println("failed to serve:", err)
 		}
