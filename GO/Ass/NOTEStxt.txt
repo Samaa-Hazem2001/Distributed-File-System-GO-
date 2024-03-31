@@ -43,6 +43,11 @@ replicationMap = {
 
 
 
+later: why machine map put many times, inifite loop
+locks in samaa part
+step 6 error 
+
+
 
 
 
