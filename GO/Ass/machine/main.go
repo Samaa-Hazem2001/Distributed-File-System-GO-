@@ -60,9 +60,13 @@ var myIp string = "localhost"
 
 func (s *FileServer) UploadFile(ctx context.Context, req *pb.UploadFileRequest) (*pb.UploadFileResponse, error) {
 	// isUpload = true
-	fmt.Println(req.PortNum)
-	fmt.Println(strconv.Itoa(int(req.PortNum)))
-	err := ioutil.WriteFile("./"+strconv.Itoa(int(req.PortNum))+"/"+req.FileName, req.File, 0644)
+	// later should be machine ip
+	err := os.Mkdir(strconv.Itoa(int(req.PortNum)), 0777)
+	if err != nil {
+		fmt.Println("Error creating folder:", err)
+	}
+	// later should be machine ip
+	err = ioutil.WriteFile("./"+strconv.Itoa(int(req.PortNum))+"/"+req.FileName, req.File, 0644)
 	if err != nil {
 		log.Printf("Failed to write file: %v", err)
 		return nil, err
@@ -123,8 +127,13 @@ func (s *FileServer) TransferFile(ctx context.Context, req *pb.TransferFileUploa
 	filename := req.GetFileName()
 	fileData := req.GetFile()
 	portNum := req.GetPortNum()
-
-	err := ioutil.WriteFile("./"+strconv.Itoa(int(portNum))+"/"+filename, fileData, 0644)
+	// later should be machine ip
+	err := os.Mkdir(strconv.Itoa(int(req.PortNum)), 0777)
+	if err != nil {
+		fmt.Println("Error creating folder:", err)
+	}
+	// later should be machine ip
+	err = ioutil.WriteFile("./"+strconv.Itoa(int(portNum))+"/"+filename, fileData, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("error writing file: %v", err)
 	}
@@ -348,16 +357,15 @@ func main() {
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop() // Stop the ticker when the function returns
 
-		for {
-			select {
-			case <-ticker.C:
-				fmt.Println("Alive Ping!!")
-				resp, err := c.Alive(context.Background(), &pb.AliveRequest{DataNodeIp: myIp})
-				if err != nil {
-					fmt.Println("Error calling KeeperDone:", err, resp)
-					return
-				}
+		for range ticker.C {
+
+			fmt.Println("Alive Ping!!")
+			resp, err := c.Alive(context.Background(), &pb.AliveRequest{DataNodeIp: myIp})
+			if err != nil {
+				fmt.Println("Error calling KeeperDone:", err, resp)
+				return
 			}
+
 		}
 	}()
 

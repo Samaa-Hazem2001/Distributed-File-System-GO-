@@ -239,43 +239,40 @@ func AliveChecker(numKeepers int) {
 	ticker := time.NewTicker(8 * time.Second) // Create a ticker that ticks every 8 seconds
 	defer ticker.Stop()                       // Stop the ticker when the function returns
 
-	for {
-		select {
-		case <-ticker.C:
+	for range ticker.C {
 
-			//for debuging
-			// Perform the task you want to do every 8 seconds
-			// fmt.Println("Alive Tracker is here")
-			// fmt.Println("aliveCount[i]", aliveCount[0])
+		//for debuging
+		// Perform the task you want to do every 8 seconds
+		// fmt.Println("Alive Tracker is here")
+		// fmt.Println("aliveCount[i]", aliveCount[0])
 
-			for i := int(0); i < numKeepers; i++ { // assuming you want to initialize values for keys 0 to 9
+		for i := int(0); i < numKeepers; i++ { // assuming you want to initialize values for keys 0 to 9
 
-				if aliveCount[i] == 0 {
-					//edit the main lookup table --asmaa
-					// mark as dead
-					lock.Lock()
-					machine := machineMap[int(i)]
-					machine.IsAlive = false
-					machineMap[int(i)] = machine
-					lock.Unlock()
-					//for debuging
-					// fmt.Println("aliveCount with id = ", i, " is out of service now")
-				} else {
-					// else mark as alive
-					lock.Lock()
-					machine := machineMap[int(i)]
-					machine.IsAlive = true
-					machineMap[int(i)] = machine
-					lock.Unlock()
-					//reset the aliveCount for this keeper
-					aliveCount[i] = 0
-				}
-
+			if aliveCount[i] == 0 {
+				//edit the main lookup table --asmaa
+				// mark as dead
+				lock.Lock()
+				machine := machineMap[int(i)]
+				machine.IsAlive = false
+				machineMap[int(i)] = machine
+				lock.Unlock()
+				//for debuging
+				// fmt.Println("aliveCount with id = ", i, " is out of service now")
+			} else {
+				// else mark as alive
+				lock.Lock()
+				machine := machineMap[int(i)]
+				machine.IsAlive = true
+				machineMap[int(i)] = machine
+				lock.Unlock()
+				//reset the aliveCount for this keeper
+				aliveCount[i] = 0
 			}
-			// Call your function or do any operation here
 
-			// Add other cases if you need to handle other channels
 		}
+		// Call your function or do any operation here
+
+		// Add other cases if you need to handle other channels
 	}
 }
 
@@ -377,90 +374,87 @@ func replicationChecker() {
 	// Get the start time of the application
 	startTime := time.Now()
 
-	for {
-		select {
-		case <-ticker.C:
+	for range ticker.C {
 
-			currentTime := time.Now()
-			elapsedTime := currentTime.Sub(startTime)
-			elapsedTimeSeconds := int(elapsedTime.Seconds())
+		currentTime := time.Now()
+		elapsedTime := currentTime.Sub(startTime)
+		elapsedTimeSeconds := int(elapsedTime.Seconds())
 
-			var replicationMap *map[string]map[string]bool
-			ticker_int := int(elapsedTimeSeconds) / 10
-			if ticker_int%3 == 1 {
-				replicationMap = &replicationMap_1 //by reference not a copy
-				if ticker_int != 1 {
-					replicationFinishfunc(replicationMap_1) //just take a copy
-				}
-			} else if ticker_int%3 == 2 {
-				replicationMap = &replicationMap_2 //by reference not a copy
-				if ticker_int != 2 {
-					replicationFinishfunc(replicationMap_2) //just take a copy
-				}
-			} else if ticker_int%3 == 0 {
-				replicationMap = &replicationMap_3 //by reference not a copy
-				if ticker_int != 3 {               //NOTE: != 3 not !=0 "samaa"
-					replicationFinishfunc(replicationMap_3) //just take a copy
-				}
-			} else {
-				fmt.Println("error !! undefined ticker_int")
-				fmt.Println("Elapsed time (seconds):", elapsedTimeSeconds)
+		var replicationMap *map[string]map[string]bool
+		ticker_int := int(elapsedTimeSeconds) / 10
+		if ticker_int%3 == 1 {
+			replicationMap = &replicationMap_1 //by reference not a copy
+			if ticker_int != 1 {
+				replicationFinishfunc(replicationMap_1) //just take a copy
 			}
-			//reset replicationMap
-			// lock.Lock()
-			(*replicationMap) = make(map[string]map[string]bool)
-			// lock.Unlock()
-
-			//for debug:
-			// fmt.Println("replicationChecker :", (*replicationMap), "with ticker_int%3 = ", ticker_int%3)
-			// fmt.Println("inside replicationChecker")
-
-			filenameMap = generateFilenameMap()
-
-			for filename, machineIps := range filenameMap {
-				// fmt.Println("inside filenameMap loop")
-
-				fmt.Printf("%s: %v\n", filename, machineIps)
-				sourceMachineIp := machineIps[0]
-				machineIpsLen := len(machineIps)
-				fmt.Println("machineIpsLen = ", machineIpsLen)
-
-				for machineIpsLen < 3 {
-					fmt.Println("inside machineIpsLen < 3 loop")
-					//later: for testing in group of laptops , uncomment this
-					// destinationMachineIp, destinationMachineId, destMachinePort, err := selectMachineToCopyTo(filename) later un comment this
-					// _, destinationMachineId, _, err := selectMachineToCopyTo(filename)
-					destinationMachineIp := "localhost"
-					destMachinePort := 8003
-					destinationMachineId := 1
-					// if err != nil {
-					// 	fmt.Println("Error: ", err)
-					// }
-					notifyMachineDataTransfer(sourceMachineIp, destinationMachineIp, destMachinePort, filename)
-					machineIpsLen++
-					filenameMap[filename] = append(filenameMap[filename], destinationMachineIp)
-
-					//samaa:
-					// lock.Lock()
-					if (*replicationMap)[filename] == nil {
-						(*replicationMap)[filename] = make(map[string]bool)
-					}
-					(*replicationMap)[filename][destinationMachineIp] = false
-					// lock.Unlock() //NOTE: ReplicationDone service may be called at this time, so we will look it as both it and ReplicationDone write on the 3 of replicationMap(s)
-
-					// lock.Lock()
-					machine := machineMap[destinationMachineId]
-					machine.FileNames = append(machine.FileNames, filename)
-					machineMap[destinationMachineId] = machine
-					fmt.Println("machineMap[destinationMachineId].FileNames = ", machineMap[destinationMachineId].FileNames)
-					// lock.Unlock()
-
-					IPReplicationMapNum[destinationMachineId] = ticker_int % 3 //NOTE 1,2,0 not 1,2,3
-					fmt.Println("tttttttttttttt")
-				}
+		} else if ticker_int%3 == 2 {
+			replicationMap = &replicationMap_2 //by reference not a copy
+			if ticker_int != 2 {
+				replicationFinishfunc(replicationMap_2) //just take a copy
 			}
-
+		} else if ticker_int%3 == 0 {
+			replicationMap = &replicationMap_3 //by reference not a copy
+			if ticker_int != 3 {               //NOTE: != 3 not !=0 "samaa"
+				replicationFinishfunc(replicationMap_3) //just take a copy
+			}
+		} else {
+			fmt.Println("error !! undefined ticker_int")
+			fmt.Println("Elapsed time (seconds):", elapsedTimeSeconds)
 		}
+		//reset replicationMap
+		// lock.Lock()
+		(*replicationMap) = make(map[string]map[string]bool)
+		// lock.Unlock()
+
+		//for debug:
+		// fmt.Println("replicationChecker :", (*replicationMap), "with ticker_int%3 = ", ticker_int%3)
+		// fmt.Println("inside replicationChecker")
+
+		filenameMap = generateFilenameMap()
+
+		for filename, machineIps := range filenameMap {
+			// fmt.Println("inside filenameMap loop")
+
+			fmt.Printf("%s: %v\n", filename, machineIps)
+			sourceMachineIp := machineIps[0]
+			machineIpsLen := len(machineIps)
+			fmt.Println("machineIpsLen = ", machineIpsLen)
+
+			for machineIpsLen < 3 {
+				fmt.Println("inside machineIpsLen < 3 loop")
+				//later: for testing in group of laptops , uncomment this
+				// destinationMachineIp, destinationMachineId, destMachinePort, err := selectMachineToCopyTo(filename) later un comment this
+				// _, destinationMachineId, _, err := selectMachineToCopyTo(filename)
+				destinationMachineIp := "localhost"
+				destMachinePort := 8003
+				destinationMachineId := 1
+				// if err != nil {
+				// 	fmt.Println("Error: ", err)
+				// }
+				notifyMachineDataTransfer(sourceMachineIp, destinationMachineIp, destMachinePort, filename)
+				machineIpsLen++
+				filenameMap[filename] = append(filenameMap[filename], destinationMachineIp)
+				fmt.Println("filenameMap[filename]: ", filenameMap[filename])
+				//samaa:
+				// lock.Lock()
+				if (*replicationMap)[filename] == nil {
+					(*replicationMap)[filename] = make(map[string]bool)
+				}
+				(*replicationMap)[filename][destinationMachineIp] = false
+				// lock.Unlock() //NOTE: ReplicationDone service may be called at this time, so we will look it as both it and ReplicationDone write on the 3 of replicationMap(s)
+
+				// lock.Lock()
+				machine := machineMap[destinationMachineId]
+				machine.FileNames = append(machine.FileNames, filename)
+				machineMap[destinationMachineId] = machine
+				fmt.Println("machineMap[destinationMachineId].FileNames = ", machineMap[destinationMachineId].FileNames)
+				// lock.Unlock()
+
+				IPReplicationMapNum[destinationMachineId] = ticker_int % 3 //NOTE 1,2,0 not 1,2,3
+				fmt.Println("tttttttttttttt")
+			}
+		}
+
 	}
 }
 
