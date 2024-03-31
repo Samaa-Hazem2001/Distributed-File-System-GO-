@@ -13,7 +13,7 @@
     {
       "id": 2,
       "ip": "localhost",
-      "ports": [{"port": 8000, "busy": false}, {"port": 8001, "busy": false}, {"port": 8002, "busy": false}]
+      "ports": [{"port": 8002, "busy": false}, {"port": 8003, "busy": false}, {"port": 8005, "busy": false}]
     },
     {
       "id": 3,

@@ -94,6 +94,7 @@ func main() {
 		}
 
 		// Send the file content to the server
+		fmt.Println(resp.GetPortNum())
 		_, err = c2.UploadFile(context.Background(), &pb.UploadFileRequest{
 			File:          fileContent,
 			FileName:      filename,
