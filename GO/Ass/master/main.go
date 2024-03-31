@@ -24,7 +24,11 @@ var (
 	lock           sync.RWMutex
 	machineMap     map[int]Machine
 	filenameMap    map[string][]string
-	replicationMap map[string]map[string]bool
+	// replicationMap map[string]map[string]bool
+	replicationMap_1 map[string]map[string]bool
+	replicationMap_2 map[string]map[string]bool
+	replicationMap_3 map[string]map[string]bool
+	IPReplicationMapNum map[string]int
 )
 
 type PortInfo struct {
@@ -270,7 +274,29 @@ func (s *KeepersServer) ReplicationDone(ctx context.Context, req *pb.Replication
 	// Print the result
 	fmt.Println("keeperIp :", keeperIp, " finished the replication for file : ", fileName)
 
-	replicationMap[fileName][keeperIp] = true
+
+	mapNum := IPReplicationMapNum[keeperIp]
+	var replicationMap *map[string]map[string]bool
+
+	lock.Lock()
+	if mapNum == 1 {
+		replicationMap = &replicationMap_1
+	} else if mapNum == 2 {
+		replicationMap = &replicationMap_2
+	} else if mapNum == 3 {
+		replicationMap = &replicationMap_3
+	} else {
+		fmt.Println("error !! undefined mapNum")
+	}
+
+	if innerMap, ok := (*replicationMap)[fileName]; ok {
+		// Check if the inner map exists for the given fileName
+		if _, exists := innerMap[keeperIp]; exists {
+			(*replicationMap)[fileName][keeperIp] = true
+		}
+	}	 
+	lock.Unlock()
+	
 
 	//mark this "portNum" as an avialble port to the machine with ip = keeperIp
 	err := setPortStatus(keeperIp, int(portNum), false)
@@ -281,57 +307,126 @@ func (s *KeepersServer) ReplicationDone(ctx context.Context, req *pb.Replication
 	return &pb.ReplicationDoneResponse{}, nil
 }
 
-func replicationFinishChecker() {
-	ticker := time.NewTicker(28 * time.Second) //NOTE: Create a ticker that ticks every 28 seconds to break the tie with 10 seconds of the replicationchecker
-	defer ticker.Stop()                        // Stop the ticker when the function returns
+// func replicationFinishChecker() {
+// 	ticker := time.NewTicker(28 * time.Second) //NOTE: Create a ticker that ticks every 28 seconds to break the tie with 10 seconds of the replicationchecker
+// 	defer ticker.Stop()                        // Stop the ticker when the function returns
 
-	for {
-		select {
-		case <-ticker.C:
+// 	for {
+// 		select {
+// 		case <-ticker.C:
 
-			for fileName, machine_lists := range replicationMap { //iterate over files
+// 			for fileName, machine_lists := range replicationMap { //iterate over files
 
-				// for debuging:
-				fmt.Printf("fileName: %s, machine_lists: %d\n", fileName, machine_lists)
+// 				// for debuging:
+// 				fmt.Printf("fileName: %s, machine_lists: %d\n", fileName, machine_lists)
 
-				for currentIp, done := range machine_lists { //iterate over machines
+// 				for currentIp, done := range machine_lists { //iterate over machines
 
-					if done {
-						continue
-					}
+// 					if done {
+// 						continue
+// 					}
 
-					//later: if not done, then go to the lookup table and delete that machine for this file name
-					if ips, ok := filenameMap[fileName]; ok {
-						indexToRemove := -1
-						for i, ip := range ips {
-							if ip == currentIp {
-								indexToRemove = i
-								break
-							}
-						}
-						if indexToRemove != -1 {
-							filenameMap[fileName] = append(ips[:indexToRemove], ips[indexToRemove+1:]...)
-						}
-					}
+// 					//later: if not done, then go to the lookup table and delete that machine for this file name
+// 					if ips, ok := filenameMap[fileName]; ok {
+// 						indexToRemove := -1
+// 						for i, ip := range ips {
+// 							if ip == currentIp {
+// 								indexToRemove = i
+// 								break
+// 							}
+// 						}
+// 						if indexToRemove != -1 {
+// 							filenameMap[fileName] = append(ips[:indexToRemove], ips[indexToRemove+1:]...)
+// 						}
+// 					}
 
-				}
+// 				}
 
+// 			}
+
+// 			//reset replicationMap
+// 			replicationMap = make(map[string]map[string]bool)
+// 			// Add other cases if you need to handle other channels
+// 		}
+// 	}
+// }
+
+func replicationFinishfunc(replicationMap map[string]map[string]bool) {
+	// replicationMap  = *replicationMap_pass
+	for fileName, machine_lists := range replicationMap { //iterate over files
+
+		// for debuging:
+		fmt.Printf("fileName: %s, machine_lists: %d\n", fileName, machine_lists)
+
+		for currentIp, done := range machine_lists { //iterate over machines
+
+			if done {
+				continue
 			}
 
-			//reset replicationMap
-			replicationMap = make(map[string]map[string]bool)
-			// Add other cases if you need to handle other channels
+			//later: if not done, then go to the lookup table and delete that machine for this file name
+			if ips, ok := filenameMap[fileName]; ok {
+				indexToRemove := -1
+				for i, ip := range ips {
+					if ip == currentIp {
+						indexToRemove = i
+						break
+					}
+				}
+				if indexToRemove != -1 {
+					filenameMap[fileName] = append(ips[:indexToRemove], ips[indexToRemove+1:]...)
+				}
+			}
+
 		}
+
 	}
+
+	//reset replicationMap //<= no need to it as we are working on a copy
+	//replicationMap = make(map[string]map[string]bool)
+	// Add other cases if you need to handle other channels
 }
 
 func replicationChecker() {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
+	// Get the start time of the application
+    startTime := time.Now()
+
 	for {
 		select {
 		case <-ticker.C:
+			currentTime := time.Now()
+			elapsedTime := currentTime.Sub(startTime)
+			elapsedTimeSeconds := int(elapsedTime.Seconds())
+
+			var replicationMap *map[string]map[string]bool
+			ticker_int := int(elapsedTimeSeconds)/10
+			if ticker_int%3 == 1 {
+				replicationMap = &replicationMap_1 //by reference not a copy
+				if ticker_int!= 1 {
+					replicationFinishfunc(replicationMap_1) //just take a copy
+				}	
+			} else if ticker_int%3 == 2  {
+				replicationMap = &replicationMap_2 //by reference not a copy
+				if ticker_int!= 2 {
+					replicationFinishfunc(replicationMap_2) //just take a copy
+				}	
+			} else if ticker_int%3 == 0 {
+				replicationMap = &replicationMap_3 //by reference not a copy
+				if ticker_int!= 3 { //NOTE: != 3 not !=0 "samaa"
+					replicationFinishfunc(replicationMap_3) //just take a copy
+				}	
+			} else {
+				fmt.Println("error !! undefined ticker_int")
+				fmt.Println("Elapsed time (seconds):", elapsedTimeSeconds)
+			}
+			//reset replicationMap
+			lock.Lock()
+			(*replicationMap) = make(map[string]map[string]bool)
+			lock.Unlock()
+
 
 			filenameMap = generateFilenameMap()
 
@@ -353,10 +448,13 @@ func replicationChecker() {
 					filenameMap[filename] = append(filenameMap[filename], destinationMachineIp)
 
 					//samaa:
-					if replicationMap[filename] == nil {
-						replicationMap[filename] = make(map[string]bool)
+					lock.Lock()
+					if (*replicationMap)[filename] == nil {
+						(*replicationMap)[filename] = make(map[string]bool)
 					}
-					replicationMap[filename][destinationMachineIp] = false
+					(*replicationMap)[filename][destinationMachineIp] = false
+					lock.Unlock() //NOTE: ReplicationDone service may be called at this time, so we will look it as both it and ReplicationDone write on the 3 of replicationMap(s) 
+
 					lock.Lock()
 					machine := machineMap[destinationMachineId]
 					machine.FileNames = append(machine.FileNames, filename)
@@ -364,6 +462,8 @@ func replicationChecker() {
 					lock.Unlock()
 				}
 			}
+
+			
 		}
 	}
 }
@@ -552,7 +652,7 @@ func main() {
 	//----- Alive check-----//
 	go AliveChecker(numKeepers)
 	go replicationChecker()
-	go replicationFinishChecker()
+	// go replicationFinishChecker()
 
 	//fmt.Println("Server started. again")
 

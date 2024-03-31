@@ -284,7 +284,7 @@ func main() {
 				//KeeperId: int32(KeeperId)
 			})
 		if err != nil {
-			fmt.Println("Error calling KeeperDone:", err, resp)
+			fmt.Println("Error calling ReplicationDone:", err, resp)
 		}
 	}
 
