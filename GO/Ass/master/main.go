@@ -140,8 +140,6 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 	fmt.Println("clientIp :", clientIp)
 
 	// later: 5-The master tracker then adds the file record to the main look-up table.
-
-	lock.Lock()
 	// defer lock.Unlock()
 	for _, machine := range machineMap {
 		if machine.IP == DataNodeIp {
@@ -151,7 +149,6 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 			lock.Unlock()
 		}
 	}
-	lock.Unlock()
 
 	// later: 6-The master will notify the client with a successful message.
 	return &pb.KeeperDoneResponse{}, nil
@@ -278,7 +275,7 @@ func (s *KeepersServer) ReplicationDone(ctx context.Context, req *pb.Replication
 	mapNum := IPReplicationMapNum[keeperIp]
 	var replicationMap *map[string]map[string]bool
 
-	lock.Lock()
+	// lock.Lock()
 	if mapNum == 1 {
 		replicationMap = &replicationMap_1
 	} else if mapNum == 2 {
@@ -295,7 +292,7 @@ func (s *KeepersServer) ReplicationDone(ctx context.Context, req *pb.Replication
 			(*replicationMap)[fileName][keeperIp] = true
 		}
 	}	 
-	lock.Unlock()
+	// lock.Unlock()
 	
 
 	//mark this "portNum" as an avialble port to the machine with ip = keeperIp
@@ -380,9 +377,9 @@ func replicationChecker() {
 				fmt.Println("Elapsed time (seconds):", elapsedTimeSeconds)
 			}
 			//reset replicationMap
-			lock.Lock()
+			// lock.Lock()
 			(*replicationMap) = make(map[string]map[string]bool)
-			lock.Unlock()
+			// lock.Unlock()
 
 			//for debug:
 			fmt.Println("replicationChecker :", (*replicationMap),"with ticker_int%3 = ",ticker_int%3)
@@ -412,18 +409,18 @@ func replicationChecker() {
 					filenameMap[filename] = append(filenameMap[filename], destinationMachineIp)
 
 					//samaa:
-					lock.Lock()
+					// lock.Lock()
 					if (*replicationMap)[filename] == nil {
 						(*replicationMap)[filename] = make(map[string]bool)
 					}
 					(*replicationMap)[filename][destinationMachineIp] = false
-					lock.Unlock() //NOTE: ReplicationDone service may be called at this time, so we will look it as both it and ReplicationDone write on the 3 of replicationMap(s) 
+					// lock.Unlock() //NOTE: ReplicationDone service may be called at this time, so we will look it as both it and ReplicationDone write on the 3 of replicationMap(s) 
 
-					lock.Lock()
+					// lock.Lock()
 					machine := machineMap[destinationMachineId]
 					machine.FileNames = append(machine.FileNames, filename)
 					machineMap[destinationMachineId] = machine
-					lock.Unlock()
+					// lock.Unlock()
 
 					IPReplicationMapNum[destinationMachineIp] = ticker_int%3  //NOTE 1,2,0 not 1,2,3
 				}
