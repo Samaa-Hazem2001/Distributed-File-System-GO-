@@ -283,7 +283,7 @@ func (s *KeepersServer) ReplicationDone(ctx context.Context, req *pb.Replication
 		replicationMap = &replicationMap_1
 	} else if mapNum == 2 {
 		replicationMap = &replicationMap_2
-	} else if mapNum == 3 {
+	} else if mapNum == 0 { //NOTE 1,2,0 not 1,2,3
 		replicationMap = &replicationMap_3
 	} else {
 		fmt.Println("error !! undefined mapNum")
@@ -306,50 +306,6 @@ func (s *KeepersServer) ReplicationDone(ctx context.Context, req *pb.Replication
 
 	return &pb.ReplicationDoneResponse{}, nil
 }
-
-// func replicationFinishChecker() {
-// 	ticker := time.NewTicker(28 * time.Second) //NOTE: Create a ticker that ticks every 28 seconds to break the tie with 10 seconds of the replicationchecker
-// 	defer ticker.Stop()                        // Stop the ticker when the function returns
-
-// 	for {
-// 		select {
-// 		case <-ticker.C:
-
-// 			for fileName, machine_lists := range replicationMap { //iterate over files
-
-// 				// for debuging:
-// 				fmt.Printf("fileName: %s, machine_lists: %d\n", fileName, machine_lists)
-
-// 				for currentIp, done := range machine_lists { //iterate over machines
-
-// 					if done {
-// 						continue
-// 					}
-
-// 					//later: if not done, then go to the lookup table and delete that machine for this file name
-// 					if ips, ok := filenameMap[fileName]; ok {
-// 						indexToRemove := -1
-// 						for i, ip := range ips {
-// 							if ip == currentIp {
-// 								indexToRemove = i
-// 								break
-// 							}
-// 						}
-// 						if indexToRemove != -1 {
-// 							filenameMap[fileName] = append(ips[:indexToRemove], ips[indexToRemove+1:]...)
-// 						}
-// 					}
-
-// 				}
-
-// 			}
-
-// 			//reset replicationMap
-// 			replicationMap = make(map[string]map[string]bool)
-// 			// Add other cases if you need to handle other channels
-// 		}
-// 	}
-// }
 
 func replicationFinishfunc(replicationMap map[string]map[string]bool) {
 	// replicationMap  = *replicationMap_pass
@@ -397,6 +353,8 @@ func replicationChecker() {
 	for {
 		select {
 		case <-ticker.C:
+			fmt.Println("inside replicationChecker")
+
 			currentTime := time.Now()
 			elapsedTime := currentTime.Sub(startTime)
 			elapsedTimeSeconds := int(elapsedTime.Seconds())
@@ -426,6 +384,9 @@ func replicationChecker() {
 			lock.Lock()
 			(*replicationMap) = make(map[string]map[string]bool)
 			lock.Unlock()
+
+			//for debug:
+			fmt.Println("replicationChecker :", (*replicationMap),"with ticker_int%3 = ",ticker_int%3)
 
 
 			filenameMap = generateFilenameMap()
@@ -460,6 +421,8 @@ func replicationChecker() {
 					machine.FileNames = append(machine.FileNames, filename)
 					machineMap[destinationMachineId] = machine
 					lock.Unlock()
+
+					IPReplicationMapNum[destinationMachineIp] = ticker_int%3  //NOTE 1,2,0 not 1,2,3
 				}
 			}
 
