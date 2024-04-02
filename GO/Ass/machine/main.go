@@ -58,13 +58,18 @@ var myIp string = "localhost"
 
 func (s *FileServer) UploadFile(ctx context.Context, req *pb.UploadFileRequest) (*pb.UploadFileResponse, error) {
 	// isUpload = true
-	// later should be machine ip
-	// err := os.Mkdir(strconv.Itoa(int(req.PortNum)), 0777)
-	// if err != nil {
-	// 	fmt.Println("Error creating folder:", err)
-	// }
-	// later should be machine ip
-	fmt.Println("./" + myIp + "/" + req.FileName)
+	if _, err := os.Stat(myIp); os.IsNotExist(err) {
+		err := os.Mkdir(myIp, 0777)
+		if err != nil {
+			fmt.Println("Error creating folder:", err)
+		}
+
+		fmt.Println("Folder created successfully.")
+	} else if err != nil {
+		fmt.Println("Error checking folder existence:", err)
+	} else {
+		fmt.Println("Folder already exists.")
+	}
 	err := ioutil.WriteFile("./"+myIp+"/"+req.FileName, req.File, 0644)
 	if err != nil {
 		log.Printf("Failed to write file: %v", err)
@@ -89,7 +94,6 @@ func (s *FileServer) DownloadFile(ctx context.Context, req *pb.DownloadFileReque
 
 	// Read the file content from the disk
 	//later: change filename
-	print("./" + myIp + "/" + req.FileName)
 	fileContent, err := ioutil.ReadFile("./" + myIp + "/" + req.FileName)
 	if err != nil {
 		log.Fatalf("%s Failed to read file: %v", req.FileName, err)
@@ -109,10 +113,7 @@ func (s *FileServer) NotifyMachineDataTransfer(ctx context.Context, req *pb.Noti
 	portNum := req.GetPortNum()
 
 	fmt.Printf("Received Notification to upload file: %s from machine %s to machine %s\n", filename, sourceMachineIp, destinationMachineIp)
-	// later: uncomment this
-	fmt.Println("./" + sourceMachineIp + "/" + filename)
 	fileContent, err := ioutil.ReadFile("./" + sourceMachineIp + "/" + filename)
-	// fileContent, err := ioutil.ReadFile("./8000/" + filename)
 	if err != nil {
 		log.Fatalf("Failed to read file: %v", err)
 	}
@@ -127,15 +128,18 @@ func (s *FileServer) TransferFile(ctx context.Context, req *pb.TransferFileUploa
 	filename := req.GetFileName()
 	fileData := req.GetFile()
 	portNum := req.GetPortNum()
-	fmt.Println("in transfer function")
-	// later should be machine ip
-	err := os.Mkdir(myIp, 0777)
-	if err != nil {
-		fmt.Println("Error creating folder:", err)
+	if _, err := os.Stat(myIp); os.IsNotExist(err) {
+		err := os.Mkdir(myIp, 0777)
+		if err != nil {
+			fmt.Println("Error creating folder:", err)
+		}
+		fmt.Println("Folder created successfully.")
+	} else if err != nil {
+		fmt.Println("Error checking folder existence:", err)
+	} else {
+		fmt.Println("Folder already exists.")
 	}
-	// later should be machine ip
-	fmt.Println("./" + myIp + "/" + filename)
-	err = ioutil.WriteFile("./"+myIp+"/"+filename, fileData, 0644)
+	err := ioutil.WriteFile("./"+myIp+"/"+filename, fileData, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("error writing file: %v", err)
 	}

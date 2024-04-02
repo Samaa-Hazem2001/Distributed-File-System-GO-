@@ -27,10 +27,10 @@ func main() {
 	//some definations://later: hnktbhm manual kda wla eh?
 	var clientPort int32 = 4000 //later: hnktbha manual kda wla eh?
 	// var clientIp string = "172.28.177.150"
-	var clientIp string = "172.28.108.231"
+	var clientIp string = "localhost"
 	var masterPortToClient int32 = 8081
 	// var masterIp string = "172.28.177.163"
-	var masterIp string = "172.28.108.237"
+	var masterIp string = "localhost"
 
 	// Read input from user
 	fmt.Print("For uploading enter '1' , for download enter '2': ")
@@ -78,7 +78,6 @@ func main() {
 
 		//part2:for uploading: connect to the machine keeper with PortNum and DataNodeIp
 
-		// later: uncomment this line
 		conn2, err := grpc.Dial(resp.GetDataNodeIp()+":"+strconv.Itoa(int(resp.GetPortNum())), grpc.WithInsecure())
 		if err != nil {
 			fmt.Println("did not connect:", err)
@@ -86,9 +85,7 @@ func main() {
 		}
 		defer conn2.Close()
 		c2 := pb.NewFileServiceClient(conn2)
-		// later: uncomment this line
 		fileContent, err := ioutil.ReadFile(filepath + "/" + filename)
-		// fileContent, err := ioutil.ReadFile("C:/Users/samaa/Downloads")
 		if err != nil {
 			log.Fatalf("Failed to read file: %v", err)
 		}
@@ -126,7 +123,7 @@ func main() {
 		// //parse el file 34an ytb3t 1000 bytes for ex
 		// //NOTE: you have to mark the end of the file chunks transfaring , you
 
-	} else { //later: change this to "else"
+	} else {
 		//---------  download file request to master  ---------//
 		// Call the RPC method
 		fmt.Print("Enter file name you want to download: ")
@@ -143,9 +140,8 @@ func main() {
 		fmt.Println("DataNodeIp :", resp.GetDataNodeIp())
 
 		// Connect to the machine to download the file
-		// later: uncomment this line
 		conn2, err := grpc.Dial(fmt.Sprintf("%s:%d", resp.GetDataNodeIp(), resp.GetPortNum()), grpc.WithInsecure())
-		// conn2, err := grpc.Dial("localhost:3000", grpc.WithInsecure())
+
 		if err != nil {
 			fmt.Println("did not connect:", err)
 			return
