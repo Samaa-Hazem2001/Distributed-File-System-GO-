@@ -59,12 +59,12 @@ var myIp string = "localhost"
 func (s *FileServer) UploadFile(ctx context.Context, req *pb.UploadFileRequest) (*pb.UploadFileResponse, error) {
 	// isUpload = true
 	// later should be machine ip
-	err := os.Mkdir(strconv.Itoa(int(req.PortNum)), 0777)
-	if err != nil {
-		fmt.Println("Error creating folder:", err)
-	}
+	// err := os.Mkdir(strconv.Itoa(int(req.PortNum)), 0777)
+	// if err != nil {
+	// 	fmt.Println("Error creating folder:", err)
+	// }
 	// later should be machine ip
-	err = ioutil.WriteFile("./"+strconv.Itoa(int(req.PortNum))+"/"+req.FileName, req.File, 0644)
+	err := ioutil.WriteFile("./"+strconv.Itoa(int(req.PortNum))+"/"+req.FileName, req.File, 0644)
 	if err != nil {
 		log.Printf("Failed to write file: %v", err)
 		return nil, err
@@ -109,8 +109,8 @@ func (s *FileServer) NotifyMachineDataTransfer(ctx context.Context, req *pb.Noti
 
 	fmt.Printf("Received Notification to upload file: %s from machine %s to machine %s\n", filename, sourceMachineIp, destinationMachineIp)
 	// later: uncomment this
-	// fileContent, err := ioutil.ReadFile("./"+sourceMachineIp+"/"+filename)
-	fileContent, err := ioutil.ReadFile("./8000/" + filename)
+	fileContent, err := ioutil.ReadFile("./" + sourceMachineIp + "/" + filename)
+	// fileContent, err := ioutil.ReadFile("./8000/" + filename)
 	if err != nil {
 		log.Fatalf("Failed to read file: %v", err)
 	}
@@ -125,13 +125,14 @@ func (s *FileServer) TransferFile(ctx context.Context, req *pb.TransferFileUploa
 	filename := req.GetFileName()
 	fileData := req.GetFile()
 	portNum := req.GetPortNum()
+	fmt.Println("in transfer function")
 	// later should be machine ip
-	err := os.Mkdir(strconv.Itoa(int(req.PortNum)), 0777)
-	if err != nil {
-		fmt.Println("Error creating folder:", err)
-	}
+	// err := os.Mkdir(strconv.Itoa(int(req.PortNum)), 0777)
+	// if err != nil {
+	// 	fmt.Println("Error creating folder:", err)
+	// }
 	// later should be machine ip
-	err = ioutil.WriteFile("./"+strconv.Itoa(int(portNum))+"/"+filename, fileData, 0644)
+	err := ioutil.WriteFile("./"+strconv.Itoa(int(portNum))+"/"+filename, fileData, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("error writing file: %v", err)
 	}
