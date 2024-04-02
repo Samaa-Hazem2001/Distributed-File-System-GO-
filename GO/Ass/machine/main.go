@@ -47,7 +47,7 @@ var callReplicationDone func(
 	destPortNum int32,
 )
 
-var myIp string = "localhost"
+var myIp string = "172.28.108.235"
 
 // func (s *UploadDownloadServer) Upload(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {
 // 	// text := req.GetText()
@@ -197,7 +197,7 @@ func main() {
 	keeperPort3, _ := strconv.Atoi(os.Args[3])
 	var masterPortToKeeper int32 = 8082
 	// var masterIp string = "172.28.177.163"
-	var masterIp string = "localhost"
+	var masterIp string = "172.28.108.237"
 
 	//------- act as client (client to master)  ------//
 	conn, err := grpc.Dial(masterIp+":"+strconv.Itoa(int(masterPortToKeeper)), grpc.WithInsecure()) //<=later //to asmaa : replace with final IP and Port of the master
