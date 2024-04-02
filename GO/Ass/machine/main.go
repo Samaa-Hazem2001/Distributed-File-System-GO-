@@ -64,7 +64,7 @@ func (s *FileServer) UploadFile(ctx context.Context, req *pb.UploadFileRequest) 
 	// 	fmt.Println("Error creating folder:", err)
 	// }
 	// later should be machine ip
-	err := ioutil.WriteFile("./"+strconv.Itoa(int(req.PortNum))+"/"+req.FileName, req.File, 0644)
+	err := ioutil.WriteFile("./"+myIp+"/"+req.FileName, req.File, 0644)
 	if err != nil {
 		log.Printf("Failed to write file: %v", err)
 		return nil, err
@@ -127,12 +127,12 @@ func (s *FileServer) TransferFile(ctx context.Context, req *pb.TransferFileUploa
 	portNum := req.GetPortNum()
 	fmt.Println("in transfer function")
 	// later should be machine ip
-	// err := os.Mkdir(strconv.Itoa(int(req.PortNum)), 0777)
-	// if err != nil {
-	// 	fmt.Println("Error creating folder:", err)
-	// }
+	err := os.Mkdir(myIp, 0777)
+	if err != nil {
+		fmt.Println("Error creating folder:", err)
+	}
 	// later should be machine ip
-	err := ioutil.WriteFile("./"+strconv.Itoa(int(portNum))+"/"+filename, fileData, 0644)
+	err = ioutil.WriteFile("./"+myIp+"/"+filename, fileData, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("error writing file: %v", err)
 	}
