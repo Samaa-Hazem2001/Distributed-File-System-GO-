@@ -47,7 +47,7 @@ var callReplicationDone func(
 	destPortNum int32,
 )
 
-var myIp string = "172.28.108.235"
+var myIp string = "localhost"
 
 // func (s *UploadDownloadServer) Upload(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {
 // 	// text := req.GetText()
@@ -64,6 +64,7 @@ func (s *FileServer) UploadFile(ctx context.Context, req *pb.UploadFileRequest) 
 	// 	fmt.Println("Error creating folder:", err)
 	// }
 	// later should be machine ip
+	fmt.Println("./" + myIp + "/" + req.FileName)
 	err := ioutil.WriteFile("./"+myIp+"/"+req.FileName, req.File, 0644)
 	if err != nil {
 		log.Printf("Failed to write file: %v", err)
@@ -109,6 +110,7 @@ func (s *FileServer) NotifyMachineDataTransfer(ctx context.Context, req *pb.Noti
 
 	fmt.Printf("Received Notification to upload file: %s from machine %s to machine %s\n", filename, sourceMachineIp, destinationMachineIp)
 	// later: uncomment this
+	fmt.Println("./" + sourceMachineIp + "/" + filename)
 	fileContent, err := ioutil.ReadFile("./" + sourceMachineIp + "/" + filename)
 	// fileContent, err := ioutil.ReadFile("./8000/" + filename)
 	if err != nil {
@@ -132,6 +134,7 @@ func (s *FileServer) TransferFile(ctx context.Context, req *pb.TransferFileUploa
 		fmt.Println("Error creating folder:", err)
 	}
 	// later should be machine ip
+	fmt.Println("./" + myIp + "/" + filename)
 	err = ioutil.WriteFile("./"+myIp+"/"+filename, fileData, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("error writing file: %v", err)
@@ -197,7 +200,7 @@ func main() {
 	keeperPort3, _ := strconv.Atoi(os.Args[3])
 	var masterPortToKeeper int32 = 8082
 	// var masterIp string = "172.28.177.163"
-	var masterIp string = "172.28.108.237"
+	var masterIp string = "localhost"
 
 	//------- act as client (client to master)  ------//
 	conn, err := grpc.Dial(masterIp+":"+strconv.Itoa(int(masterPortToKeeper)), grpc.WithInsecure()) //<=later //to asmaa : replace with final IP and Port of the master

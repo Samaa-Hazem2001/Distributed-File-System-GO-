@@ -12,7 +12,7 @@
     },
     {
       "id": 2,
-      "ip": "localhost",
+      "ip": "172.28.108.231",
       "ports": [{"port": 8000, "busy": false}, {"port": 8001, "busy": false}, {"port": 8002, "busy": false}]
     },
     {

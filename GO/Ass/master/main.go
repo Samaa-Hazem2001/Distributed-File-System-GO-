@@ -421,7 +421,7 @@ func replicationChecker() {
 			machineIpsLen := len(machineIps)
 			fmt.Println("machineIpsLen = ", machineIpsLen)
 
-			for machineIpsLen < 2 {
+			for machineIpsLen < 3 {
 				fmt.Println("inside machineIpsLen < 3 loop")
 				//later: for testing in group of laptops , uncomment this
 				destinationMachineIp, destinationMachineId, destMachinePort, err := selectMachineToCopyTo(filename)
