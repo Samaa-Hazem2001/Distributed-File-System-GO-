@@ -88,8 +88,8 @@ func (s *FileServer) DownloadFile(ctx context.Context, req *pb.DownloadFileReque
 
 	// Read the file content from the disk
 	//later: change filename
-	print(req.FileName)
-	fileContent, err := ioutil.ReadFile(req.FileName)
+	print("./" + myIp + "/" + req.FileName)
+	fileContent, err := ioutil.ReadFile("./" + myIp + "/" + req.FileName)
 	if err != nil {
 		log.Fatalf("%s Failed to read file: %v", req.FileName, err)
 		return nil, err

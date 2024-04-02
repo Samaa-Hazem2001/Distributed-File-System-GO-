@@ -19,6 +19,7 @@ import (
 )
 
 // later: locks for samaa
+// later: pick random non busy machine
 // //// global variables //////
 var (
 	aliveCount  map[int]int // Define aliveCount as a global variable
@@ -138,7 +139,7 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 	clientPort := req.GetClientPortNum()
 	clientIp := req.GetClientIp()
 
-	// ConfirmClient(clientIp, clientPort)
+	ConfirmClient(clientIp, clientPort)
 
 	// later: what about ip? is it the same as Id
 	err := setPortStatus(DataNodeIp, int(freePortNum), false)
