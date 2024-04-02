@@ -51,12 +51,13 @@ message UploadFileRequest {
 // later: if there is a respose from the machine to client or the client will take the response from master only(valid to send empty response??)  
 message UploadFileResponse {
 }
-service UploadDownloadFileService {
+
+service FileService {
     rpc UploadFile(UploadFileRequest) returns (UploadFileResponse);
     rpc DownloadFile(DownloadFileRequest) returns (DownloadFileResponse);
+    rpc TransferFile(TransferFileUploadRequest) returns (TransferFileUploadResponse);
 
 }
-
 //----------  Notify Machine  -----------//
 message notifyMachineDataTransferRequest {
     string source_ip = 1;
@@ -81,9 +82,7 @@ message TransferFileUploadResponse {
     bool success = 1;
     string message = 2;
 }
-service TransferFileService {
-    rpc TransferFile(TransferFileUploadRequest) returns (TransferFileUploadResponse);
-}
+
 
 
 //----------  Existance for Replication   -----------//

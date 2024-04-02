@@ -423,14 +423,14 @@ func replicationChecker() {
 			for machineIpsLen < 3 {
 				fmt.Println("inside machineIpsLen < 3 loop")
 				//later: for testing in group of laptops , uncomment this
-				// destinationMachineIp, destinationMachineId, destMachinePort, err := selectMachineToCopyTo(filename) later un comment this
+				destinationMachineIp, destinationMachineId, destMachinePort, err := selectMachineToCopyTo(filename)
 				// _, destinationMachineId, _, err := selectMachineToCopyTo(filename)
-				destinationMachineIp := "localhost"
-				destMachinePort := 8003
-				destinationMachineId := 1
-				// if err != nil {
-				// 	fmt.Println("Error: ", err)
-				// }
+				// destinationMachineIp := "localhost"
+				// destMachinePort := 8003
+				// destinationMachineId := 1
+				if err != nil {
+					fmt.Println("Error: ", err)
+				}
 				notifyMachineDataTransfer(sourceMachineIp, destinationMachineIp, destMachinePort, filename)
 				machineIpsLen++
 				filenameMap[filename] = append(filenameMap[filename], destinationMachineIp)
@@ -458,33 +458,34 @@ func replicationChecker() {
 	}
 }
 
-//	func selectMachineToCopyTo(filename string) (string, int, int, error) {
-//		machineIps := filenameMap[filename]
-//		for _, machine := range machineMap {
-//			if machine.IsAlive {
-//				found := false
-//				for _, ip := range machineIps {
-//					if ip == machine.IP {
-//						found = true
-//						break
-//					}
-//				}
-//				if !found {
-//					//later:asmaa change the dheck for a machine to have unbusy port
-//					//later:asmaa change the port num
-//					for i, port := range machine.Ports {
-//						if !port.Busy {
-//							lock.Lock()
-//							machineMap[machine.ID].Ports[i].Busy = true
-//							lock.Unlock()
-//							return machine.IP, machine.ID, port.Port, nil
-//						}
-//					}
-//				}
-//			}
-//		}
-//		return "", 0, 0, fmt.Errorf("failed to find machine")
-//	}
+func selectMachineToCopyTo(filename string) (string, int, int, error) {
+	machineIps := filenameMap[filename]
+	for _, machine := range machineMap {
+		if machine.IsAlive {
+			found := false
+			for _, ip := range machineIps {
+				if ip == machine.IP {
+					found = true
+					break
+				}
+			}
+			if !found {
+				//later:asmaa change the dheck for a machine to have unbusy port
+				//later:asmaa change the port num
+				for i, port := range machine.Ports {
+					if !port.Busy {
+						lock.Lock()
+						machineMap[machine.ID].Ports[i].Busy = true
+						lock.Unlock()
+						return machine.IP, machine.ID, port.Port, nil
+					}
+				}
+			}
+		}
+	}
+	return "", 0, 0, fmt.Errorf("failed to find machine")
+}
+
 func getIdFromIp(Ip string) int {
 	for _, machine := range machineMap {
 		if machine.IP == Ip {

@@ -22,17 +22,15 @@ import (
 // 	pb.UnimplementedUploadDownloadFileServiceServer
 // }
 
-// type NotifyMachineDataTransferServer struct {
-// 	pb.UnimplementedNotifyMachineDataTransferServiceServer
-// }
+type NotifyMachineDataTransferServer struct {
+	pb.UnimplementedNotifyMachineDataTransferServiceServer
+}
 
 //	type TransferFileServiceServer struct {
 //		pb.UnimplementedTransferFileServiceServer
 //	}
 type FileServer struct {
-	pb.UnimplementedUploadDownloadFileServiceServer
-	pb.UnimplementedTransferFileServiceServer
-	pb.UnimplementedNotifyMachineDataTransferServiceServer
+	pb.UnimplementedFileServiceServer
 }
 
 var callKeeperDone func(
@@ -152,7 +150,7 @@ func sendFileData(destinationMachineIp string, destPortNum int32, filename strin
 	}
 	defer conn.Close()
 
-	client := pb.NewTransferFileServiceClient(conn)
+	client := pb.NewFileServiceClient(conn)
 
 	_, err = client.TransferFile(context.Background(), &pb.TransferFileUploadRequest{
 		FileName: filename,
@@ -176,9 +174,7 @@ func serve(port int) {
 	s := grpc.NewServer()
 
 	// Register your gRPC services with the server
-	pb.RegisterUploadDownloadFileServiceServer(s, &FileServer{})
-	pb.RegisterTransferFileServiceServer(s, &FileServer{})
-	pb.RegisterNotifyMachineDataTransferServiceServer(s, &FileServer{})
+	pb.RegisterFileServiceServer(s, &FileServer{})
 
 	// Serve gRPC requests
 	if err := s.Serve(lis); err != nil {

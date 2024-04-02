@@ -27,10 +27,10 @@ func main() {
 	//some definations://later: hnktbhm manual kda wla eh?
 	var clientPort int32 = 4000 //later: hnktbha manual kda wla eh?
 	// var clientIp string = "172.28.177.150"
-	var clientIp string = "localhost"
+	var clientIp string = "172.28.108.231"
 	var masterPortToClient int32 = 8081
 	// var masterIp string = "172.28.177.163"
-	var masterIp string = "localhost"
+	var masterIp string = "172.28.108.237"
 
 	// Read input from user
 	fmt.Print("For uploading enter '1' , for download enter '2': ")
@@ -85,7 +85,7 @@ func main() {
 			return
 		}
 		defer conn2.Close()
-		c2 := pb.NewUploadDownloadFileServiceClient(conn2)
+		c2 := pb.NewFileServiceClient(conn2)
 		// later: uncomment this line
 		fileContent, err := ioutil.ReadFile(filepath + "/" + filename)
 		// fileContent, err := ioutil.ReadFile("C:/Users/samaa/Downloads")
@@ -152,7 +152,7 @@ func main() {
 		}
 		defer conn2.Close()
 
-		c2 := pb.NewUploadDownloadFileServiceClient(conn2)
+		c2 := pb.NewFileServiceClient(conn2)
 
 		// Call the DownloadFile RPC method
 		downloadResp, err := c2.DownloadFile(context.Background(), &pb.DownloadFileRequest{FileName: filename})
