@@ -22,9 +22,9 @@ import (
 // 	pb.UnimplementedUploadDownloadFileServiceServer
 // }
 
-type NotifyMachineDataTransferServer struct {
-	pb.UnimplementedNotifyMachineDataTransferServiceServer
-}
+// type NotifyMachineDataTransferServer struct {
+// 	pb.UnimplementedNotifyMachineDataTransferServiceServer
+// }
 
 //	type TransferFileServiceServer struct {
 //		pb.UnimplementedTransferFileServiceServer

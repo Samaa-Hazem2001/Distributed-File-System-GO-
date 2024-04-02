@@ -146,9 +146,10 @@ var ClientService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	FileService_UploadFile_FullMethodName   = "/AllServices.FileService/UploadFile"
-	FileService_DownloadFile_FullMethodName = "/AllServices.FileService/DownloadFile"
-	FileService_TransferFile_FullMethodName = "/AllServices.FileService/TransferFile"
+	FileService_UploadFile_FullMethodName                = "/AllServices.FileService/UploadFile"
+	FileService_DownloadFile_FullMethodName              = "/AllServices.FileService/DownloadFile"
+	FileService_NotifyMachineDataTransfer_FullMethodName = "/AllServices.FileService/NotifyMachineDataTransfer"
+	FileService_TransferFile_FullMethodName              = "/AllServices.FileService/TransferFile"
 )
 
 // FileServiceClient is the client API for FileService service.
@@ -157,6 +158,7 @@ const (
 type FileServiceClient interface {
 	UploadFile(ctx context.Context, in *UploadFileRequest, opts ...grpc.CallOption) (*UploadFileResponse, error)
 	DownloadFile(ctx context.Context, in *DownloadFileRequest, opts ...grpc.CallOption) (*DownloadFileResponse, error)
+	NotifyMachineDataTransfer(ctx context.Context, in *NotifyMachineDataTransferRequest, opts ...grpc.CallOption) (*NotifyMachineDataTransferResponse, error)
 	TransferFile(ctx context.Context, in *TransferFileUploadRequest, opts ...grpc.CallOption) (*TransferFileUploadResponse, error)
 }
 
@@ -186,6 +188,15 @@ func (c *fileServiceClient) DownloadFile(ctx context.Context, in *DownloadFileRe
 	return out, nil
 }
 
+func (c *fileServiceClient) NotifyMachineDataTransfer(ctx context.Context, in *NotifyMachineDataTransferRequest, opts ...grpc.CallOption) (*NotifyMachineDataTransferResponse, error) {
+	out := new(NotifyMachineDataTransferResponse)
+	err := c.cc.Invoke(ctx, FileService_NotifyMachineDataTransfer_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *fileServiceClient) TransferFile(ctx context.Context, in *TransferFileUploadRequest, opts ...grpc.CallOption) (*TransferFileUploadResponse, error) {
 	out := new(TransferFileUploadResponse)
 	err := c.cc.Invoke(ctx, FileService_TransferFile_FullMethodName, in, out, opts...)
@@ -201,6 +212,7 @@ func (c *fileServiceClient) TransferFile(ctx context.Context, in *TransferFileUp
 type FileServiceServer interface {
 	UploadFile(context.Context, *UploadFileRequest) (*UploadFileResponse, error)
 	DownloadFile(context.Context, *DownloadFileRequest) (*DownloadFileResponse, error)
+	NotifyMachineDataTransfer(context.Context, *NotifyMachineDataTransferRequest) (*NotifyMachineDataTransferResponse, error)
 	TransferFile(context.Context, *TransferFileUploadRequest) (*TransferFileUploadResponse, error)
 	mustEmbedUnimplementedFileServiceServer()
 }
@@ -214,6 +226,9 @@ func (UnimplementedFileServiceServer) UploadFile(context.Context, *UploadFileReq
 }
 func (UnimplementedFileServiceServer) DownloadFile(context.Context, *DownloadFileRequest) (*DownloadFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DownloadFile not implemented")
+}
+func (UnimplementedFileServiceServer) NotifyMachineDataTransfer(context.Context, *NotifyMachineDataTransferRequest) (*NotifyMachineDataTransferResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NotifyMachineDataTransfer not implemented")
 }
 func (UnimplementedFileServiceServer) TransferFile(context.Context, *TransferFileUploadRequest) (*TransferFileUploadResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method TransferFile not implemented")
@@ -267,6 +282,24 @@ func _FileService_DownloadFile_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FileService_NotifyMachineDataTransfer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NotifyMachineDataTransferRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FileServiceServer).NotifyMachineDataTransfer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FileService_NotifyMachineDataTransfer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FileServiceServer).NotifyMachineDataTransfer(ctx, req.(*NotifyMachineDataTransferRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _FileService_TransferFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(TransferFileUploadRequest)
 	if err := dec(in); err != nil {
@@ -301,99 +334,12 @@ var FileService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _FileService_DownloadFile_Handler,
 		},
 		{
+			MethodName: "NotifyMachineDataTransfer",
+			Handler:    _FileService_NotifyMachineDataTransfer_Handler,
+		},
+		{
 			MethodName: "TransferFile",
 			Handler:    _FileService_TransferFile_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "Ass/AllServices/dfs.proto",
-}
-
-const (
-	NotifyMachineDataTransferService_NotifyMachineDataTransfer_FullMethodName = "/AllServices.NotifyMachineDataTransferService/NotifyMachineDataTransfer"
-)
-
-// NotifyMachineDataTransferServiceClient is the client API for NotifyMachineDataTransferService service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type NotifyMachineDataTransferServiceClient interface {
-	NotifyMachineDataTransfer(ctx context.Context, in *NotifyMachineDataTransferRequest, opts ...grpc.CallOption) (*NotifyMachineDataTransferResponse, error)
-}
-
-type notifyMachineDataTransferServiceClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewNotifyMachineDataTransferServiceClient(cc grpc.ClientConnInterface) NotifyMachineDataTransferServiceClient {
-	return &notifyMachineDataTransferServiceClient{cc}
-}
-
-func (c *notifyMachineDataTransferServiceClient) NotifyMachineDataTransfer(ctx context.Context, in *NotifyMachineDataTransferRequest, opts ...grpc.CallOption) (*NotifyMachineDataTransferResponse, error) {
-	out := new(NotifyMachineDataTransferResponse)
-	err := c.cc.Invoke(ctx, NotifyMachineDataTransferService_NotifyMachineDataTransfer_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// NotifyMachineDataTransferServiceServer is the server API for NotifyMachineDataTransferService service.
-// All implementations must embed UnimplementedNotifyMachineDataTransferServiceServer
-// for forward compatibility
-type NotifyMachineDataTransferServiceServer interface {
-	NotifyMachineDataTransfer(context.Context, *NotifyMachineDataTransferRequest) (*NotifyMachineDataTransferResponse, error)
-	mustEmbedUnimplementedNotifyMachineDataTransferServiceServer()
-}
-
-// UnimplementedNotifyMachineDataTransferServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedNotifyMachineDataTransferServiceServer struct {
-}
-
-func (UnimplementedNotifyMachineDataTransferServiceServer) NotifyMachineDataTransfer(context.Context, *NotifyMachineDataTransferRequest) (*NotifyMachineDataTransferResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method NotifyMachineDataTransfer not implemented")
-}
-func (UnimplementedNotifyMachineDataTransferServiceServer) mustEmbedUnimplementedNotifyMachineDataTransferServiceServer() {
-}
-
-// UnsafeNotifyMachineDataTransferServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to NotifyMachineDataTransferServiceServer will
-// result in compilation errors.
-type UnsafeNotifyMachineDataTransferServiceServer interface {
-	mustEmbedUnimplementedNotifyMachineDataTransferServiceServer()
-}
-
-func RegisterNotifyMachineDataTransferServiceServer(s grpc.ServiceRegistrar, srv NotifyMachineDataTransferServiceServer) {
-	s.RegisterService(&NotifyMachineDataTransferService_ServiceDesc, srv)
-}
-
-func _NotifyMachineDataTransferService_NotifyMachineDataTransfer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(NotifyMachineDataTransferRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NotifyMachineDataTransferServiceServer).NotifyMachineDataTransfer(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: NotifyMachineDataTransferService_NotifyMachineDataTransfer_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NotifyMachineDataTransferServiceServer).NotifyMachineDataTransfer(ctx, req.(*NotifyMachineDataTransferRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-// NotifyMachineDataTransferService_ServiceDesc is the grpc.ServiceDesc for NotifyMachineDataTransferService service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var NotifyMachineDataTransferService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "AllServices.NotifyMachineDataTransferService",
-	HandlerType: (*NotifyMachineDataTransferServiceServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "NotifyMachineDataTransfer",
-			Handler:    _NotifyMachineDataTransferService_NotifyMachineDataTransfer_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

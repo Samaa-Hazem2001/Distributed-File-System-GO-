@@ -55,7 +55,10 @@ message UploadFileResponse {
 service FileService {
     rpc UploadFile(UploadFileRequest) returns (UploadFileResponse);
     rpc DownloadFile(DownloadFileRequest) returns (DownloadFileResponse);
+    rpc NotifyMachineDataTransfer(notifyMachineDataTransferRequest) returns (notifyMachineDataTransferResponse);
     rpc TransferFile(TransferFileUploadRequest) returns (TransferFileUploadResponse);
+
+
 
 }
 //----------  Notify Machine  -----------//
@@ -67,9 +70,6 @@ message notifyMachineDataTransferRequest {
 } 
 message notifyMachineDataTransferResponse {
 } 
-service NotifyMachineDataTransferService {
-    rpc NotifyMachineDataTransfer(notifyMachineDataTransferRequest) returns (notifyMachineDataTransferResponse);
-}
 
 //----------  Transfer File  -----------//
 //from machine to machine -m.s

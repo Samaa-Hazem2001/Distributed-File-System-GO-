@@ -420,7 +420,7 @@ func replicationChecker() {
 			machineIpsLen := len(machineIps)
 			fmt.Println("machineIpsLen = ", machineIpsLen)
 
-			for machineIpsLen < 3 {
+			for machineIpsLen < 2 {
 				fmt.Println("inside machineIpsLen < 3 loop")
 				//later: for testing in group of laptops , uncomment this
 				destinationMachineIp, destinationMachineId, destMachinePort, err := selectMachineToCopyTo(filename)
@@ -495,6 +495,7 @@ func getIdFromIp(Ip string) int {
 	return -1
 }
 func notifyMachineDataTransfer(sourceMachineIp string, destinationMachineIp string, destMachinePort int, filename string) error {
+	fmt.Println("notifyMachineDataTransfernotifyMachineDataTransfernotifyMachineDataTransfer")
 	//later: from the ip get the id
 	machineID := getIdFromIp(sourceMachineIp)
 
@@ -512,14 +513,14 @@ func notifyMachineDataTransfer(sourceMachineIp string, destinationMachineIp stri
 			}
 		}
 	}
-
+	fmt.Println(sourceMachineIp + ":" + strconv.Itoa(int(nonBusyPort)))
 	conn, err := grpc.Dial(sourceMachineIp+":"+strconv.Itoa(int(nonBusyPort)), grpc.WithInsecure())
 	if err != nil {
 		return fmt.Errorf("failed to connect: %v", err)
 	}
 	defer conn.Close()
 
-	client := pb.NewNotifyMachineDataTransferServiceClient(conn)
+	client := pb.NewFileServiceClient(conn)
 
 	_, err = client.NotifyMachineDataTransfer(context.Background(), &pb.NotifyMachineDataTransferRequest{
 		SourceIp: sourceMachineIp,
