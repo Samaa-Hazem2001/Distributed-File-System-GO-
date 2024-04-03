@@ -218,90 +218,12 @@ func main() {
 
 	//------- act as sever (server to client or other keeper -for replication-) ------//
 
-	// //later: how to listen to multiple ports ? and call the same function for any connection of them?
-	// //listen to client connection or other keeper connection
-	// s := grpc.NewServer()
-	// pb.RegisterUploadDownloadFileServiceServer(s, &UploadDownloadServer{})
-
-	// // listener 1
-	// lis1, err := net.Listen("tcp", ":"+strconv.Itoa(int(keeperPort1)))
-	// if err != nil {
-	// 	fmt.Println("failed to listen:", err)
-	// 	return
-	// }
-	// fmt.Println("Server started. Listening on port = ", keeperPort1)
-
-	// // listener 2
-	// lis2, err := net.Listen("tcp", ":"+strconv.Itoa(int(keeperPort2)))
-	// if err != nil {
-	// 	fmt.Println("failed to listen:", err)
-	// 	return
-	// }
-	// fmt.Println("Server started. Listening on port = ", keeperPort2)
-
-	// // listener 3
-	// lis3, err := net.Listen("tcp", ":"+strconv.Itoa(int(keeperPort3)))
-	// if err != nil {
-	// 	fmt.Println("failed to listen:", err)
-	// 	return
-	// }
-	// fmt.Println("Server started. Listening on port = ", keeperPort3)
-
-	// go func() {
-	// 	//fmt.Println("inside go " )
-	// 	if err := s.Serve(lis1); err != nil {
-	// 		fmt.Println("failed to serve:", err)
-	// 	}
-
-	// }()
-	// go func() {
-	// 	//fmt.Println("inside go " )
-	// 	if err := s.Serve(lis2); err != nil {
-	// 		fmt.Println("failed to serve:", err)
-	// 	}
-	// }()
-	// go func() {
-	// 	//fmt.Println("inside go " )
-	// 	if err := s.Serve(lis3); err != nil {
-	// 		fmt.Println("failed to serve:", err)
-	// 	}
-	// }()
-	// go func() {
-	// 	lis, err := net.Listen("tcp", ":50051")
-	// 	if err != nil {
-	// 		log.Fatalf("Failed to listen: %v", err)
-	// 	}
-	// 	s := grpc.NewServer()
-	// 	pb.RegisterTransferFileServiceServer(s, &TransferFileServiceServer{})
-	// 	log.Println("server started. Listening on port 50051")
-	// 	if err := s.Serve(lis); err != nil {
-	// 		log.Fatalf("Failed to serve: %v", err)
-	// 	}
-	// }()
-
 	//we assume we will not call "keeperDone" after finishing downloading like in uploading
 	go serve(keeperPort1)
 	go serve(keeperPort2)
 	go serve(keeperPort3)
 
 	fmt.Println("Server started on ports:", keeperPort1, keeperPort2, keeperPort3)
-
-	// Register the gRPC service implementation
-	// s22 := grpc.NewServer()
-	// pb.RegisterNotifyMachineDataTransferServiceServer(s22, &NotifyMachineDataTransferServer{}) //<=later:kant bt3ml eh de?
-
-	// lisMtoM, err := net.Listen("tcp", ":3000") //<=later
-	// if err != nil {
-	// 	fmt.Println("failed to listen:", err)
-	// 	return
-	// }
-	// fmt.Println("Server started. Listening on port 3000")
-
-	// go func() {
-	// 	if err := s22.Serve(lisMtoM); err != nil {
-	// 		fmt.Println("failed to serve:", err)
-	// 	}
-	// }()
 
 	callKeeperDone = func(
 		filename string,
@@ -343,18 +265,6 @@ func main() {
 			fmt.Println("Error calling ReplicationDone:", err, resp)
 		}
 	}
-
-	// // Concurrently send KeepersService requests to master
-	// go func() {
-	// 	for {
-	// 		// later: change file name...
-	// 		resp, err := c.KeeperDone(context.Background(), &pb.KeeperDoneRequest{FileName: filename, FileSize: int32(fileSize), PortNum: uploadPortNum, DataNodeIp: uploadIP, KeeperId: int32(KeeperId)})
-	// 		if err != nil {
-	// 			fmt.Println("Error calling KeeperDone:", err, resp)
-	// 		}
-	// 		time.Sleep(time.Second) // Adjust the frequency of sending requests
-	// 	}
-	// }()
 
 	//--- Alive ---//
 	go func() {
