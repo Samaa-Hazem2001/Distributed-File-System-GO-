@@ -588,19 +588,6 @@ func main() {
 		// later change it depend for what?
 		machine.IsAlive = true
 	}
-	// printing
-	// fmt.Println("Machines:")
-	// for id, machine := range machineMap {
-	// 	fmt.Printf("ID: %d\n", id)
-	// 	fmt.Printf("  IP: %s\n", machine.IP)
-	// 	fmt.Printf("  FileNames: %s\n", machine.FileNames)
-	// 	fmt.Printf("  IsAlive: %t\n", machine.IsAlive)
-	// 	fmt.Println("  Ports:")
-	// 	for _, port := range machine.Ports {
-	// 		fmt.Printf("    %d (%t)\n", port.Port, port.Busy)
-	// 	}
-	// 	fmt.Println()
-	// }
 
 	//NOTE: map[KeyType]ValueType
 	// var aliveCount map[int]int
@@ -620,20 +607,9 @@ func main() {
 
 	sUp := grpc.NewServer()
 	pb.RegisterClientServiceServer(sUp, &ClientServer{})
+	fmt.Println("Client server started. Listening on port 8081...")
 
-	// Create a channel to signal when the server is done
-	done := make(chan bool)
-
-	// Start the gRPC server in a separate Goroutine
-	go func() {
-		fmt.Println("Client server started. Listening on port 8081...")
-		if err := sUp.Serve(lisUp); err != nil {
-			fmt.Println("failed to serve:", err)
-		}
-		done <- true // Signal that the server is done
-	}()
-
-	// fmt.Println("Server started. again")
+	
 
 	//-------------  Keeper Done (step5) and Alive (from master)  ------------- //
 	lisKeeper, err := net.Listen("tcp", ":8082")
@@ -644,22 +620,14 @@ func main() {
 
 	sKeeper := grpc.NewServer()
 	pb.RegisterKeepersServiceServer(sKeeper, &KeepersServer{})
-	// Start the gRPC server in a separate Goroutine
-	go func() {
-		fmt.Println("Keeper server started. Listening on port 8082...")
-		if err := sKeeper.Serve(lisKeeper); err != nil {
-			fmt.Println("failed to serve:", err)
-		}
-		done <- true // Signal that the server is done
-	}()
+	fmt.Println("Keeper server started. Listening on port 8082...")
 
-	//----- Alive check-----//
-	go AliveChecker(numKeepers)
-	go replicationChecker()
+	go sUp.Serve(lisUp)
+		go sKeeper.Serve(lisKeeper)
+
+		go AliveChecker(numKeepers)
+		go replicationChecker()
+	
 	// go replicationFinishChecker()
-
-	//fmt.Println("Server started. again")
-
-	// Wait for the server to finish (optional)
-	<-done
+	select {}
 }
