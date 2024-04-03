@@ -623,10 +623,10 @@ func main() {
 	fmt.Println("Keeper server started. Listening on port 8082...")
 
 	go sUp.Serve(lisUp)
-		go sKeeper.Serve(lisKeeper)
+	go sKeeper.Serve(lisKeeper)
 
-		go AliveChecker(numKeepers)
-		go replicationChecker()
+	go AliveChecker(numKeepers)
+	go replicationChecker()
 	
 	// go replicationFinishChecker()
 	select {}

@@ -22,14 +22,10 @@ func (s *DoneUpServer) DoneUp(ctx context.Context, req *pb.DoneUpRequest) (*pb.D
 }
 
 func main() {
-	//later:assume that the client connection can be one upload or one download only
 
-	//some definations://later: hnktbhm manual kda wla eh?
-	var clientPort int32 = 8005 //later: hnktbha manual kda wla eh?
-	// var clientIp string = "172.28.177.150"
+	var clientPort int32 = 8005 
 	var clientIp string = "localhost"
 	var masterPortToClient int32 = 8081
-	// var masterIp string = "172.28.177.163"
 	var masterIp string = "localhost"
 
 	//---------------------------------------------------------------------------// 
@@ -55,6 +51,17 @@ func main() {
 	sDone := grpc.NewServer()
 	pb.RegisterDoneUpServiceServer(sDone, &DoneUpServer{})
 	fmt.Println("Client started. Listening on port = ", clientPort)
+
+	//wait for the requst with success that will be send for the uploaded file from the master
+	go func() {
+		fmt.Println("before serve")
+		if err := sDone.Serve(lisDone); err != nil {
+			fmt.Println("failed to serve:", err)
+		} else {
+			fmt.Println("File uploaded successfully , confirmed from master")
+		}
+		fmt.Println("after serve")
+	}()
 
 	//---------------------------------------------------------------------------// 
 	for { 
@@ -109,21 +116,7 @@ func main() {
 			})
 			if err != nil {
 				log.Fatalf("Failed to upload file: %v", err)
-			}
-
-			// fmt.Println("File uploaded successfully")
-			//wait for the requst with success that will be send for the uploaded file from the master
-			//we assume that will happen only in uploading
-			//go func() {
-			fmt.Println("before serve")
-			go sDone.Serve(lisDone)
-			fmt.Println("after serve")
-			// if err != nil {
-			// 	fmt.Println("failed to serve:", err)
-			// 	return
-			// }
-			fmt.Println("File uploaded successfully , confirmed from master")
-			//}()
+			}		
 
 		} else {
 			//---------  download file request to master  ---------//
@@ -133,7 +126,7 @@ func main() {
 			fmt.Scanln(&filename)
 			resp, err := c.Download(context.Background(), &pb.DownloadRequest{FileName: filename})
 			if err != nil {
-				fmt.Println("Error calling UploadFile:", err)
+				fmt.Println("Error calling Download:", err)
 				return
 			}
 
@@ -177,40 +170,3 @@ func main() {
 
 }
 
-// package main
-
-// import (
-// 	"bufio"
-// 	"fmt"
-// 	"os"
-// 	"io/ioutil"
-// )
-
-// func main() {
-// 	// Read input from user
-// 	reader := bufio.NewReader(os.Stdin)
-// 	fmt.Print("Enter the file path: ")
-// 	filePath, _ := reader.ReadString('\n')
-
-// 	// Remove newline character from the file path
-// 	filePath = filePath[:len(filePath)-1]
-
-// 	// Open the file
-// 	file, err := os.Open(filePath)
-// 	if err != nil {
-// 		fmt.Println("Error opening file:", err)
-// 		return
-// 	}
-// 	defer file.Close()
-
-// 	// Read the file contents
-// 	content, err := ioutil.ReadAll(file)
-// 	if err != nil {
-// 		fmt.Println("Error reading file:", err)
-// 		return
-// 	}
-
-// 	// Print the file contents
-// 	fmt.Println("File contents:")
-// 	fmt.Println(string(content))
-// }
