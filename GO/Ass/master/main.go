@@ -171,6 +171,25 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 	// later: 6-The master will notify the client with a successful message.
 	return &pb.KeeperDoneResponse{}, nil
 }
+
+func (s *KeepersServer) KeeperDoneDown(ctx context.Context, req *pb.KeeperDoneDownRequest) (*pb.KeeperDoneDownResponse, error) {
+	freePortNum := req.GetPortNum()
+	DataNodeIp := req.GetDataNodeIp()
+
+	// later: what about ip? is it the same as Id
+	err := setPortStatus(DataNodeIp, int(freePortNum), false)
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+
+	//for debuging:-
+	// Print the result
+	fmt.Println("freePortNum :", freePortNum)
+	fmt.Println("DataNodeIp :", DataNodeIp)
+
+	// later: 6-The master will notify the client with a successful message.
+	return &pb.KeeperDoneDownResponse{}, nil
+}
 func ConfirmClient(ip string, port int32) {
 	conn, err := grpc.Dial(ip+":"+strconv.Itoa(int(port)), grpc.WithInsecure())
 	if err != nil {

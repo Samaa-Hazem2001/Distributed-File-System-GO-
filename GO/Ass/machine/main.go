@@ -42,6 +42,11 @@ var callKeeperDone func(
 	uploadPortNum int32,
 )
 
+var callKeeperDoneDownload func(
+	// uploadIP string,
+	downloadPortNum int32,
+)
+
 var callReplicationDone func(
 	filename string,
 	destPortNum int32,
@@ -99,6 +104,12 @@ func (s *FileServer) DownloadFile(ctx context.Context, req *pb.DownloadFileReque
 		log.Fatalf("%s Failed to read file: %v", req.FileName, err)
 		return nil, err
 	}
+
+
+	callKeeperDoneDownload(
+		// req.DataNodeIp,
+		req.PortNum,
+	)
 
 	// Return the file content in the response
 	return &pb.DownloadFileResponse{
@@ -263,6 +274,20 @@ func main() {
 			})
 		if err != nil {
 			fmt.Println("Error calling ReplicationDone:", err, resp)
+		}
+	}
+
+	callKeeperDoneDownload = func(
+		downloadPortNum int32,
+	) {
+		fmt.Println("This is a nested function")
+		resp, err := c.KeeperDoneDown(context.Background(),
+			&pb.KeeperDoneDownRequest{
+				DataNodeIp:    myIp,
+				PortNum:       downloadPortNum,
+			})
+		if err != nil {
+			fmt.Println("Error calling KeeperDoneDown :", err, resp)
 		}
 	}
 

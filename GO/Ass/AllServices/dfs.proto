@@ -33,6 +33,7 @@ service ClientService {
 //from client to machine : for uploading process (m.s)
 message DownloadFileRequest {
     string file_name = 1;
+    int32 port_num = 2;
 }
 message DownloadFileResponse {
     bytes file = 1;
@@ -124,6 +125,14 @@ message KeeperDoneRequest {
 message KeeperDoneResponse {  
 }
 
+message KeeperDoneDownRequest {
+    int32 port_num = 1;
+    string data_node_ip = 2;  
+}
+
+message KeeperDoneDownResponse {  
+}
+
 message ReplicationDoneRequest {
     //NOTE: we will not notify the client about the replication finishing
     string file_name = 1;
@@ -146,8 +155,10 @@ message AliveResponse {
 
 service KeepersService {
     rpc KeeperDone(KeeperDoneRequest) returns (KeeperDoneResponse);
+    rpc KeeperDoneDown(KeeperDoneDownRequest) returns (KeeperDoneDownResponse);
     rpc ReplicationDone(ReplicationDoneRequest) returns (ReplicationDoneResponse);
     rpc Alive(AliveRequest) returns (AliveResponse);
+
 }
 
 //----------  Master Done Uploading  -----------//
