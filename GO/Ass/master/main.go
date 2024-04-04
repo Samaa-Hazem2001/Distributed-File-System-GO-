@@ -108,6 +108,31 @@ func removeFilenameFromMachine(targetIP string, filenameToRemove string) {
 	}
 	fmt.Printf("No machine found with IP '%s' or filename '%s' not found\n", targetIP, filenameToRemove)
 }
+func getMachineByIP(machineMap map[int]Machine, ip string) (Machine, bool) {
+	for _, machine := range machineMap {
+		if machine.IP == ip {
+			return machine, true
+		}
+	}
+	return Machine{}, false
+}
+func findNonBusyPortForFilename(filename string) (int, string, error) {
+	ips, ok := filenameMap[filename]
+	if !ok {
+		return 0, "", errors.New("no available machine found that has the file")
+	}
+	for _, ip := range ips {
+		if machine, ok := getMachineByIP(machineMap, ip); ok {
+			for _, port := range machine.Ports {
+				if !port.Busy {
+					return port.Port, ip, nil
+				}
+			}
+		}
+	}
+	return 0, "", errors.New("no available non-busy port found that has the file")
+
+}
 
 // ----------  Download  -----------//
 func (s *ClientServer) Download(ctx context.Context, req *pb.DownloadRequest) (*pb.DownloadResponse, error) {
@@ -117,7 +142,7 @@ func (s *ClientServer) Download(ctx context.Context, req *pb.DownloadRequest) (*
 	fmt.Println("fileName to be downloaded:", fileName)
 
 	//later: search which mahine have this file
-	PortNum, DataNodeIp, err := findNonBusyPort()
+	PortNum, DataNodeIp, err := findNonBusyPortForFilename(fileName)
 	if err != nil {
 		return nil, err
 	}
@@ -628,8 +653,6 @@ func main() {
 	pb.RegisterClientServiceServer(sUp, &ClientServer{})
 	fmt.Println("Client server started. Listening on port 8081...")
 
-	
-
 	//-------------  Keeper Done (step5) and Alive (from master)  ------------- //
 	lisKeeper, err := net.Listen("tcp", ":8082")
 	if err != nil {
@@ -646,7 +669,7 @@ func main() {
 
 	go AliveChecker(numKeepers)
 	go replicationChecker()
-	
+
 	// go replicationFinishChecker()
 	select {}
 }
