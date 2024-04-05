@@ -56,8 +56,8 @@ var myIp string = "localhost"
 
 // func (s *UploadDownloadServer) Upload(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {
 // 	// text := req.GetText()
-// 	port := int32(8080) //later: change it to be an unbusy port
-// 	ip_string := "ip_here" //later: change it to be the IP with the an unbusy machine
+// 	port := int32(8080)
+// 	ip_string := "ip_here"
 // 	return &pb.UpdateResponse{PortNum: port,DataNodeIp: ip_string}, nil
 // }
 
@@ -98,13 +98,11 @@ func (s *FileServer) DownloadFile(ctx context.Context, req *pb.DownloadFileReque
 	// isUpload = false
 
 	// Read the file content from the disk
-	//later: change filename
 	fileContent, err := ioutil.ReadFile("./" + myIp + "/" + req.FileName)
 	if err != nil {
 		log.Fatalf("%s Failed to read file: %v", req.FileName, err)
 		return nil, err
 	}
-
 
 	callKeeperDoneDownload(
 		// req.DataNodeIp,
@@ -203,7 +201,7 @@ func serve(port int) {
 }
 func main() {
 	// isUpload = false
-	//some definations://later: hnktbhm manual kda wla eh?
+	//some definations:
 	for i, arg := range os.Args[1:] {
 		fmt.Printf("Argument %d: %s\n", i+1, arg)
 	}
@@ -225,7 +223,7 @@ func main() {
 	}
 	defer conn.Close()
 	c := pb.NewKeepersServiceClient(conn)
-	// KeeperId := 0 //later: remove it from proto file and here ?
+	// KeeperId := 0
 
 	//------- act as sever (server to client or other keeper -for replication-) ------//
 
@@ -283,8 +281,8 @@ func main() {
 		fmt.Println("This is a nested function")
 		resp, err := c.KeeperDoneDown(context.Background(),
 			&pb.KeeperDoneDownRequest{
-				DataNodeIp:    myIp,
-				PortNum:       downloadPortNum,
+				DataNodeIp: myIp,
+				PortNum:    downloadPortNum,
 			})
 		if err != nil {
 			fmt.Println("Error calling KeeperDoneDown :", err, resp)

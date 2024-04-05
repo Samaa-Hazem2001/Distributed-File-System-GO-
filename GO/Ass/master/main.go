@@ -18,13 +18,11 @@ import (
 	"google.golang.org/grpc"
 )
 
-// later: locks for samaa
-// later: pick random non busy machine
 // //// global variables //////
 var (
-	aliveCount   map[int]int // Define aliveCount as a global variable
-	lock         sync.RWMutex
-	lockReplication        sync.RWMutex
+	aliveCount map[int]int // Define aliveCount as a global variable
+	lock       sync.RWMutex
+	// lockReplication sync.RWMutex
 	lockFilename sync.RWMutex
 	machineMap   map[int]Machine
 	filenameMap  map[string][]string
@@ -40,7 +38,6 @@ type PortInfo struct {
 	Busy bool `json:"busy"`
 }
 
-// later: should we add filepath
 type Machine struct {
 	ID        int        `json:"id"`
 	IP        string     `json:"ip"`
@@ -84,7 +81,6 @@ func findNonBusyPort() (int, string, error) {
 		if machine.IsAlive {
 			for i, port := range machine.Ports {
 				if !port.Busy {
-					//later: look on the machineMap here?
 					lock.Lock()
 					machineMap[machine.ID].Ports[i].Busy = true
 					lock.Unlock()
@@ -126,9 +122,11 @@ func findNonBusyPortForFilename(filename string) (int, string, error) {
 	}
 	for _, ip := range ips {
 		if machine, ok := getMachineByIP(machineMap, ip); ok {
-			for _, port := range machine.Ports {
-				if !port.Busy {
-					return port.Port, ip, nil
+			if machine.IsAlive {
+				for _, port := range machine.Ports {
+					if !port.Busy {
+						return port.Port, ip, nil
+					}
 				}
 			}
 		}
@@ -144,7 +142,6 @@ func (s *ClientServer) Download(ctx context.Context, req *pb.DownloadRequest) (*
 	//for debuging:-
 	fmt.Println("fileName to be downloaded:", fileName)
 
-	//later: search which mahine have this file
 	PortNum, DataNodeIp, err := findNonBusyPortForFilename(fileName)
 	if err != nil {
 		return nil, err
@@ -169,7 +166,6 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 
 	ConfirmClient(clientIp, clientPort)
 
-	// later: what about ip? is it the same as Id
 	err := setPortStatus(DataNodeIp, int(freePortNum), false)
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -184,8 +180,6 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 	fmt.Println("clientPort :", clientPort)
 	fmt.Println("clientIp :", clientIp)
 
-	// later: 5-The master tracker then adds the file record to the main look-up table.
-	// defer lock.Unlock()
 	for _, machine := range machineMap {
 		if machine.IP == DataNodeIp {
 			lock.Lock()
@@ -197,7 +191,6 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 	}
 	updateFilenameMap()
 
-	// later: 6-The master will notify the client with a successful message.
 	return &pb.KeeperDoneResponse{}, nil
 }
 
@@ -205,7 +198,6 @@ func (s *KeepersServer) KeeperDoneDown(ctx context.Context, req *pb.KeeperDoneDo
 	freePortNum := req.GetPortNum()
 	DataNodeIp := req.GetDataNodeIp()
 
-	// later: what about ip? is it the same as Id
 	err := setPortStatus(DataNodeIp, int(freePortNum), false)
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -216,7 +208,6 @@ func (s *KeepersServer) KeeperDoneDown(ctx context.Context, req *pb.KeeperDoneDo
 	fmt.Println("freePortNum :", freePortNum)
 	fmt.Println("DataNodeIp :", DataNodeIp)
 
-	// later: 6-The master will notify the client with a successful message.
 	return &pb.KeeperDoneDownResponse{}, nil
 }
 func ConfirmClient(ip string, port int32) {
@@ -249,7 +240,6 @@ func setPortStatus(DataNodeIp string, portNumber int, isBusy bool) error {
 		if machine.IP == DataNodeIp {
 			for i, port := range machine.Ports {
 				if port.Port == portNumber {
-					//later: look on the machineMap here?
 					lock.Lock()
 					machine.Ports[i].Busy = isBusy
 					machineMap[machine.ID] = machine
@@ -334,7 +324,6 @@ func (s *KeepersServer) ReplicationDone(ctx context.Context, req *pb.Replication
 	// Print the result
 	fmt.Println("keeperIp :", keeperIp, " finished the replication for file : ", fileName)
 
-	// later: uncomment this
 	mapNum := IPReplicationMapNum[getIdFromIp(keeperIp)]
 	// mapNum := 1
 	var replicationMap *map[string]map[string]bool
@@ -380,7 +369,6 @@ func replicationFinishfunc(replicationMap map[string]map[string]bool) {
 				continue
 			}
 
-			//later: if not done, then go to the lookup table and delete that machine for this file name
 			if ips, ok := filenameMap[fileName]; ok {
 				indexToRemove := -1
 				for i, ip := range ips {
@@ -473,7 +461,6 @@ func replicationChecker() {
 
 			for machineIpsLen < 3 {
 				fmt.Println("inside machineIpsLen < 3 loop")
-				//later: for testing in group of laptops , uncomment this
 				destinationMachineIp, destinationMachineId, destMachinePort, err := selectMachineToCopyTo(filename)
 				// _, destinationMachineId, _, err := selectMachineToCopyTo(filename)
 				// destinationMachineIp := "localhost"
@@ -523,8 +510,6 @@ func selectMachineToCopyTo(filename string) (string, int, int, error) {
 				}
 			}
 			if !found {
-				//later:asmaa change the dheck for a machine to have unbusy port
-				//later:asmaa change the port num
 				for i, port := range machine.Ports {
 					if !port.Busy {
 						lock.Lock()
@@ -549,13 +534,12 @@ func getIdFromIp(Ip string) int {
 }
 func notifyMachineDataTransfer(sourceMachineIp string, destinationMachineIp string, destMachinePort int, filename string) error {
 	fmt.Println("notifyMachineDataTransfernotifyMachineDataTransfernotifyMachineDataTransfer")
-	//later: from the ip get the id
+
 	machineID := getIdFromIp(sourceMachineIp)
 
 	var nonBusyPort int
 	machine := machineMap[machineID]
-	//later: look on the machineMap here?
-	if machine.IsAlive { //later: do we have to delete this unnecessary condition?
+	if machine.IsAlive {
 		for i, port := range machine.Ports {
 			if !port.Busy {
 				lock.Lock()
@@ -621,8 +605,6 @@ func updateFilenameMap() {
 
 /////////////////////////////// main ///////////////////////////////
 
-// later: is there is one client at a time to the master? wla el master laz ykon 3ndha multiple ports 34an ykon fe kza client?
-// ?: hwa el upload request and download request from the clients ,each one have to be in a sepearte ports?(the current assumption is yes)
 func main() {
 	filenameMap = make(map[string][]string)
 	config, err := loadConfig("config.json")
@@ -633,7 +615,6 @@ func main() {
 	machineMap = make(map[int]Machine)
 	IPReplicationMapNum = make(map[int]int)
 
-	//later: look on the machineMap here?
 	for _, machine := range config.Machines {
 		machineMap[machine.ID] = machine
 		machine.FileNames = make([]string, 0)
@@ -644,7 +625,7 @@ func main() {
 	//NOTE: map[KeyType]ValueType
 	// var aliveCount map[int]int
 	aliveCount = make(map[int]int)
-	numKeepers := int(4) //?+later:change it manually or according to what?
+	numKeepers := int(4)
 
 	for i := int(0); i < numKeepers; i++ { // assuming you want to initialize values for keys 0 to 9
 		aliveCount[i] = 0
@@ -678,6 +659,5 @@ func main() {
 	go AliveChecker(numKeepers)
 	go replicationChecker()
 
-	// go replicationFinishChecker()
 	select {}
 }

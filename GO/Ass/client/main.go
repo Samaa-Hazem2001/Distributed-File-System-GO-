@@ -23,14 +23,14 @@ func (s *DoneUpServer) DoneUp(ctx context.Context, req *pb.DoneUpRequest) (*pb.D
 
 func main() {
 
-	var clientPort int32 = 8005 
+	var clientPort int32 = 8005
 	var clientIp string = "localhost"
 	var masterPortToClient int32 = 8081
 	var masterIp string = "localhost"
 
-	//---------------------------------------------------------------------------// 
+	//---------------------------------------------------------------------------//
 
-	conn, err := grpc.Dial(masterIp+":"+strconv.Itoa(int(masterPortToClient)), grpc.WithInsecure()) //later:changer it to master anf d port and ip from config file //to asmaa
+	conn, err := grpc.Dial(masterIp+":"+strconv.Itoa(int(masterPortToClient)), grpc.WithInsecure())
 
 	if err != nil {
 		fmt.Println("did not connect:", err)
@@ -39,8 +39,7 @@ func main() {
 	defer conn.Close()
 	c := pb.NewClientServiceClient(conn)
 
-	//---------------------------------------------------------------------------// 
-
+	//---------------------------------------------------------------------------//
 
 	//initialize the listener of the "success" request from the master
 	lisDone, err := net.Listen("tcp", ":"+strconv.Itoa(int(clientPort)))
@@ -63,13 +62,12 @@ func main() {
 		fmt.Println("after serve")
 	}()
 
-	//---------------------------------------------------------------------------// 
-	for { 
+	//---------------------------------------------------------------------------//
+	for {
 		// Read input from user
 		fmt.Print("For uploading enter '1' , for download enter '2': ")
 		var upORdown int
 		fmt.Scanln(&upORdown)
-
 
 		if upORdown == 1 {
 			//---------  upload file request to master  ---------//
@@ -116,7 +114,7 @@ func main() {
 			})
 			if err != nil {
 				log.Fatalf("Failed to upload file: %v", err)
-			}		
+			}
 
 		} else {
 			//---------  download file request to master  ---------//
@@ -165,8 +163,7 @@ func main() {
 
 		}
 
-	//  conn.Close()
+		//  conn.Close()
 	}
 
 }
-
