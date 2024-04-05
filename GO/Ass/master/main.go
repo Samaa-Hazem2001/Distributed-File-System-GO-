@@ -22,10 +22,11 @@ import (
 // later: pick random non busy machine
 // //// global variables //////
 var (
-	aliveCount  map[int]int // Define aliveCount as a global variable
-	lock        sync.RWMutex
-	machineMap  map[int]Machine
-	filenameMap map[string][]string
+	aliveCount   map[int]int // Define aliveCount as a global variable
+	lock         sync.RWMutex
+	lockFilename sync.RWMutex
+	machineMap   map[int]Machine
+	filenameMap  map[string][]string
 	// replicationMap map[string]map[string]bool
 	replicationMap_1    map[string]map[string]bool
 	replicationMap_2    map[string]map[string]bool
@@ -388,7 +389,9 @@ func replicationFinishfunc(replicationMap map[string]map[string]bool) {
 					}
 				}
 				if indexToRemove != -1 {
+					lockFilename.Lock()
 					filenameMap[fileName] = append(ips[:indexToRemove], ips[indexToRemove+1:]...)
+					lockFilename.Unlock()
 				}
 			}
 			removeFilenameFromMachine(currentIp, fileName)
@@ -480,7 +483,9 @@ func replicationChecker() {
 				}
 				notifyMachineDataTransfer(sourceMachineIp, destinationMachineIp, destMachinePort, filename)
 				machineIpsLen++
+				lockFilename.Lock()
 				filenameMap[filename] = append(filenameMap[filename], destinationMachineIp)
+				lockFilename.Unlock()
 				fmt.Println("filenameMap[filename]: ", filenameMap[filename])
 				//samaa:
 				// lock.Lock()
@@ -490,12 +495,12 @@ func replicationChecker() {
 				(*replicationMap)[filename][destinationMachineIp] = false
 				// lock.Unlock() //NOTE: ReplicationDone service may be called at this time, so we will look it as both it and ReplicationDone write on the 3 of replicationMap(s)
 
-				// lock.Lock()
+				lock.Lock()
 				machine := machineMap[destinationMachineId]
 				machine.FileNames = append(machine.FileNames, filename)
 				machineMap[destinationMachineId] = machine
 				fmt.Println("machineMap[destinationMachineId].FileNames = ", machineMap[destinationMachineId].FileNames)
-				// lock.Unlock()
+				lock.Unlock()
 
 				IPReplicationMapNum[destinationMachineId] = ticker_int % 3 //NOTE 1,2,0 not 1,2,3
 				fmt.Println("tttttttttttttt")
@@ -597,7 +602,9 @@ func updateFilenameMap() {
 			for _, filename := range machine.FileNames {
 				fmt.Println("filename = " + filename)
 				if !machineIps[machine.ID] {
+					lockFilename.Lock()
 					filenameMap[filename] = append(filenameMap[filename], machine.IP)
+					lockFilename.Unlock()
 					machineIps[machine.ID] = true
 				}
 			}
