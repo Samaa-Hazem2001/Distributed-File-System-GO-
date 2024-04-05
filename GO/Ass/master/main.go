@@ -106,6 +106,7 @@ func removeFilenameFromMachine(targetIP string, filenameToRemove string) {
 			}
 		}
 	}
+	updateFilenameMap()
 	fmt.Printf("No machine found with IP '%s' or filename '%s' not found\n", targetIP, filenameToRemove)
 }
 func getMachineByIP(machineMap map[int]Machine, ip string) (Machine, bool) {
@@ -192,6 +193,7 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 			break
 		}
 	}
+	updateFilenameMap()
 
 	// later: 6-The master will notify the client with a successful message.
 	return &pb.KeeperDoneResponse{}, nil
@@ -455,7 +457,7 @@ func replicationChecker() {
 		// fmt.Println("replicationChecker :", (*replicationMap), "with ticker_int%3 = ", ticker_int%3)
 		// fmt.Println("inside replicationChecker")
 
-		filenameMap = generateFilenameMap()
+		updateFilenameMap()
 
 		for filename, machineIps := range filenameMap {
 			// fmt.Println("inside filenameMap loop")
@@ -587,8 +589,7 @@ func notifyMachineDataTransfer(sourceMachineIp string, destinationMachineIp stri
 
 	return nil
 }
-func generateFilenameMap() map[string][]string {
-	filenameMap := make(map[string][]string)
+func updateFilenameMap() {
 
 	for _, machine := range machineMap {
 		if machine.IsAlive {
@@ -608,8 +609,6 @@ func generateFilenameMap() map[string][]string {
 		fmt.Printf("  machines: %v\n", machines)
 		fmt.Println()
 	}
-
-	return filenameMap
 }
 
 /////////////////////////////// main ///////////////////////////////
@@ -617,6 +616,7 @@ func generateFilenameMap() map[string][]string {
 // later: is there is one client at a time to the master? wla el master laz ykon 3ndha multiple ports 34an ykon fe kza client?
 // ?: hwa el upload request and download request from the clients ,each one have to be in a sepearte ports?(the current assumption is yes)
 func main() {
+	filenameMap = make(map[string][]string)
 	config, err := loadConfig("config.json")
 	if err != nil {
 		fmt.Println("Error loading configuration:", err)
