@@ -24,6 +24,7 @@ import (
 var (
 	aliveCount   map[int]int // Define aliveCount as a global variable
 	lock         sync.RWMutex
+	lockReplication        sync.RWMutex
 	lockFilename sync.RWMutex
 	machineMap   map[int]Machine
 	filenameMap  map[string][]string
@@ -338,7 +339,7 @@ func (s *KeepersServer) ReplicationDone(ctx context.Context, req *pb.Replication
 	// mapNum := 1
 	var replicationMap *map[string]map[string]bool
 
-	// lock.Lock()
+	// lockReplication.Lock()
 	if mapNum == 1 {
 		replicationMap = &replicationMap_1
 	} else if mapNum == 2 {
@@ -355,7 +356,7 @@ func (s *KeepersServer) ReplicationDone(ctx context.Context, req *pb.Replication
 			(*replicationMap)[fileName][keeperIp] = true
 		}
 	}
-	// lock.Unlock()
+	// lockReplication.Unlock()
 
 	//mark this "portNum" as an avialble port to the machine with ip = keeperIp
 	err := setPortStatus(keeperIp, int(portNum), false)
@@ -452,9 +453,9 @@ func replicationChecker() {
 			fmt.Println("Elapsed time (seconds):", elapsedTimeSeconds)
 		}
 		//reset replicationMap
-		// lock.Lock()
+		// lockReplication.Lock()
 		(*replicationMap) = make(map[string]map[string]bool)
-		// lock.Unlock()
+		// lockReplication.Unlock()
 
 		//for debug:
 		// fmt.Println("replicationChecker :", (*replicationMap), "with ticker_int%3 = ", ticker_int%3)
@@ -488,12 +489,12 @@ func replicationChecker() {
 				lockFilename.Unlock()
 				fmt.Println("filenameMap[filename]: ", filenameMap[filename])
 				//samaa:
-				// lock.Lock()
+				// lockReplication.Lock()
 				if (*replicationMap)[filename] == nil {
 					(*replicationMap)[filename] = make(map[string]bool)
 				}
 				(*replicationMap)[filename][destinationMachineIp] = false
-				// lock.Unlock() //NOTE: ReplicationDone service may be called at this time, so we will look it as both it and ReplicationDone write on the 3 of replicationMap(s)
+				// lockReplication.Unlock() //NOTE: ReplicationDone service may be called at this time, so we will look it as both it and ReplicationDone write on the 3 of replicationMap(s)
 
 				lock.Lock()
 				machine := machineMap[destinationMachineId]
