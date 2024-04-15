@@ -189,7 +189,19 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 			break
 		}
 	}
-	updateFilenameMap()
+
+	filenameMap[fileName] = append(filenameMap[fileName],DataNodeIp)
+	fmt.Println("inside keeper Done :",fileName,filenameMap[fileName])
+	
+	/*
+	if _, ok := filenameMap[fileName]; ok {
+		filenameMap[fileName] = append(filenameMap[fileName],DataNodeIp)
+		fmt.Println("inside keeper Done :",filenameMap[fileName])
+	} else {
+		filenameMap[fileName] = DataNodeIp
+	}
+	*/
+	//updateFilenameMap()
 
 	return &pb.KeeperDoneResponse{}, nil
 }
@@ -216,6 +228,7 @@ func ConfirmClient(ip string, port int32) {
 		fmt.Println("Failed to connect to client with IP:", ip, ":", err)
 		return
 	}
+	fmt.Println("Conncted to Client %s",ip+":"+strconv.Itoa(int(port)))
 
 	defer conn.Close()
 	c := pb.NewDoneUpServiceClient(conn)
@@ -273,7 +286,15 @@ func (s *KeepersServer) Alive(ctx context.Context, req *pb.AliveRequest) (*pb.Al
 
 	return &pb.AliveResponse{}, nil
 }
-
+func removeElementByValue(arr []string, value string) []string {
+	var result []string
+	for _, v := range arr {
+		if v != value {
+			result = append(result, v)
+		}
+	}
+	return result
+}
 func AliveChecker(numKeepers int) {
 	ticker := time.NewTicker(8 * time.Second) // Create a ticker that ticks every 8 seconds
 	defer ticker.Stop()                       // Stop the ticker when the function returns
@@ -295,6 +316,18 @@ func AliveChecker(numKeepers int) {
 				machine.IsAlive = false
 				machineMap[int(i)] = machine
 				lock.Unlock()
+
+				machineDeadIp := machineMap[i].IP
+				for key,_ := range filenameMap {
+					for j := int(0); j < len(filenameMap[key]); j++ {
+						if machineDeadIp ==  filenameMap[key][j] {
+							filenameMap[key] = removeElementByValue(filenameMap[key],machineDeadIp)
+							break
+						}
+					}
+
+					
+				}
 				//for debuging
 				// fmt.Println("aliveCount with id = ", i, " is out of service now")
 			} else {
@@ -447,9 +480,7 @@ func replicationChecker() {
 
 		//for debug:
 		// fmt.Println("replicationChecker :", (*replicationMap), "with ticker_int%3 = ", ticker_int%3)
-		// fmt.Println("inside replicationChecker")
-
-		updateFilenameMap()
+		//fmt.Println("inside replicationChecker")
 
 		for filename, machineIps := range filenameMap {
 			// fmt.Println("inside filenameMap loop")
@@ -457,10 +488,10 @@ func replicationChecker() {
 			fmt.Printf("%s: %v\n", filename, machineIps)
 			sourceMachineIp := machineIps[0]
 			machineIpsLen := len(machineIps)
-			fmt.Println("machineIpsLen = ", machineIpsLen)
+			//fmt.Println("machineIpsLen = ", machineIpsLen)
 
-			for machineIpsLen < 3 {
-				fmt.Println("inside machineIpsLen < 3 loop")
+			for machineIpsLen < 2 {
+				//fmt.Println("inside machineIpsLen < 3 loop")
 				destinationMachineIp, destinationMachineId, destMachinePort, err := selectMachineToCopyTo(filename)
 				// _, destinationMachineId, _, err := selectMachineToCopyTo(filename)
 				// destinationMachineIp := "localhost"
@@ -468,30 +499,32 @@ func replicationChecker() {
 				// destinationMachineId := 1
 				if err != nil {
 					fmt.Println("Error: ", err)
-				}
-				notifyMachineDataTransfer(sourceMachineIp, destinationMachineIp, destMachinePort, filename)
-				machineIpsLen++
-				lockFilename.Lock()
-				filenameMap[filename] = append(filenameMap[filename], destinationMachineIp)
-				lockFilename.Unlock()
-				fmt.Println("filenameMap[filename]: ", filenameMap[filename])
-				//samaa:
-				// lockReplication.Lock()
-				if (*replicationMap)[filename] == nil {
-					(*replicationMap)[filename] = make(map[string]bool)
-				}
-				(*replicationMap)[filename][destinationMachineIp] = false
-				// lockReplication.Unlock() //NOTE: ReplicationDone service may be called at this time, so we will look it as both it and ReplicationDone write on the 3 of replicationMap(s)
+				} else {
+				
+					notifyMachineDataTransfer(sourceMachineIp, destinationMachineIp, destMachinePort, filename)
+					machineIpsLen++
+					lockFilename.Lock()
+					filenameMap[filename] = append(filenameMap[filename], destinationMachineIp)
+					lockFilename.Unlock()
+					fmt.Println("filenameMap[filename]: ", filenameMap[filename])
+					//samaa:
+					// lockReplication.Lock()
+					if (*replicationMap)[filename] == nil {
+						(*replicationMap)[filename] = make(map[string]bool)
+					}
+					(*replicationMap)[filename][destinationMachineIp] = false
+					// lockReplication.Unlock() //NOTE: ReplicationDone service may be called at this time, so we will look it as both it and ReplicationDone write on the 3 of replicationMap(s)
 
-				lock.Lock()
-				machine := machineMap[destinationMachineId]
-				machine.FileNames = append(machine.FileNames, filename)
-				machineMap[destinationMachineId] = machine
-				fmt.Println("machineMap[destinationMachineId].FileNames = ", machineMap[destinationMachineId].FileNames)
-				lock.Unlock()
+					lock.Lock()
+					machine := machineMap[destinationMachineId]
+					machine.FileNames = append(machine.FileNames, filename)
+					machineMap[destinationMachineId] = machine
+					fmt.Println("machineMap[destinationMachineId].FileNames = ", machineMap[destinationMachineId].FileNames)
+					lock.Unlock()
 
-				IPReplicationMapNum[destinationMachineId] = ticker_int % 3 //NOTE 1,2,0 not 1,2,3
-				fmt.Println("tttttttttttttt")
+					IPReplicationMapNum[destinationMachineId] = ticker_int % 3 //NOTE 1,2,0 not 1,2,3
+					fmt.Println("tttttttttttttt")
+			}
 			}
 		}
 
