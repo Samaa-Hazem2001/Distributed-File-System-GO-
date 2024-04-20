@@ -2,23 +2,23 @@
   "machines": [
     {
       "id": 0,
-      "ip": "192.168.43.120",
+      "ip": "localhost",
       "ports": [{"port": 8000, "busy": false}, {"port": 8001, "busy": false}, {"port": 8002, "busy": false}]
     },
     {
       "id": 1,
-      "ip": "192.168.43.179",
-      "ports": [{"port": 8000, "busy": false}, {"port": 8001, "busy": false}, {"port": 8002, "busy": false}]
+      "ip": "localhost",
+      "ports": [{"port": 8003, "busy": false}, {"port": 8004, "busy": false}, {"port": 8005, "busy": false}]
     },
     {
       "id": 2,
-      "ip": "192.168.43.136",
-      "ports": [{"port": 8000, "busy": false}, {"port": 8001, "busy": false}, {"port": 8002, "busy": false}]
+      "ip": "localhost",
+      "ports": [{"port": 5000, "busy": false}, {"port": 5001, "busy": false}, {"port": 5002, "busy": false}]
     },
     {
       "id": 3,
       "ip": "localhost",
-      "ports": [{"port": 8000, "busy": false}, {"port": 8001, "busy": false}, {"port": 8002, "busy": false}]
+      "ports": [{"port": 4000, "busy": false}, {"port": 4001, "busy": false}, {"port": 4002, "busy": false}]
     }
   ]
 }

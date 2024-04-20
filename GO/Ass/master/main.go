@@ -25,7 +25,7 @@ var (
 	// lockReplication sync.RWMutex
 	lockFilename sync.RWMutex
 	machineMap   map[int]Machine
-	filenameMap  map[string][]string
+	filenameMap  map[string][]int
 	// replicationMap map[string]map[string]bool
 	replicationMap_1    map[string]map[string]bool
 	replicationMap_2    map[string]map[string]bool
@@ -91,21 +91,20 @@ func findNonBusyPort() (int, string, error) {
 	}
 	return 0, "", errors.New("no available non-busy port found")
 }
-func removeFilenameFromMachine(targetIP string, filenameToRemove string) {
-	for _, machine := range machineMap {
-		if machine.IP == targetIP {
-			for i, filename := range machine.FileNames {
-				if filename == filenameToRemove {
-					// Remove the filename from the slice
-					machine.FileNames = append(machine.FileNames[:i], machine.FileNames[i+1:]...)
-					fmt.Printf("Filename '%s' removed from machine with IP '%s'\n", filenameToRemove, targetIP)
-					return
-				}
-			}
+func removeFilenameFromMachine(targetId int, filenameToRemove string) {
+	machine := machineMap[targetId]
+
+	for i, filename := range machine.FileNames {
+		if filename == filenameToRemove {
+			// Remove the filename from the slice
+			machine.FileNames = append(machine.FileNames[:i], machine.FileNames[i+1:]...)
+			fmt.Printf("Filename '%s' removed from machine with IP '%d'\n", filenameToRemove, targetId)
+			return
 		}
 	}
+
 	updateFilenameMap()
-	fmt.Printf("No machine found with IP '%s' or filename '%s' not found\n", targetIP, filenameToRemove)
+	fmt.Printf("No machine found with IP '%d' or filename '%s' not found\n", targetId, filenameToRemove)
 }
 func getMachineByIP(machineMap map[int]Machine, ip string) (Machine, bool) {
 	for _, machine := range machineMap {
@@ -115,23 +114,23 @@ func getMachineByIP(machineMap map[int]Machine, ip string) (Machine, bool) {
 	}
 	return Machine{}, false
 }
-func findNonBusyPortForFilename(filename string) (int, string, error) {
-	ips, ok := filenameMap[filename]
+func findNonBusyPortForFilename(filename string) (int, int, error) {
+	ids, ok := filenameMap[filename]
 	if !ok {
-		return 0, "", errors.New("no available machine found that has the file")
+		return -1, -1, errors.New("no available machine found that has the file")
 	}
-	for _, ip := range ips {
-		if machine, ok := getMachineByIP(machineMap, ip); ok {
+	for _, id := range ids {
+		if machine, ok := machineMap[id]; ok {
 			if machine.IsAlive {
 				for _, port := range machine.Ports {
 					if !port.Busy {
-						return port.Port, ip, nil
+						return port.Port, id, nil
 					}
 				}
 			}
 		}
 	}
-	return 0, "", errors.New("no available non-busy port found that has the file")
+	return -1, -1, errors.New("no available non-busy port found that has the file")
 
 }
 
@@ -142,10 +141,11 @@ func (s *ClientServer) Download(ctx context.Context, req *pb.DownloadRequest) (*
 	//for debuging:-
 	fmt.Println("fileName to be downloaded:", fileName)
 
-	PortNum, DataNodeIp, err := findNonBusyPortForFilename(fileName)
+	PortNum, DataNodeId, err := findNonBusyPortForFilename(fileName)
 	if err != nil {
 		return nil, err
 	}
+	DataNodeIp := machineMap[DataNodeId].IP
 	return &pb.DownloadResponse{PortNum: int32(PortNum), DataNodeIp: DataNodeIp}, nil
 }
 
@@ -180,26 +180,28 @@ func (s *KeepersServer) KeeperDone(ctx context.Context, req *pb.KeeperDoneReques
 	fmt.Println("clientPort :", clientPort)
 	fmt.Println("clientIp :", clientIp)
 
+	var machineId int
 	for _, machine := range machineMap {
 		if machine.IP == DataNodeIp {
 			lock.Lock()
 			machine.FileNames = append(machine.FileNames, fileName)
 			machineMap[machine.ID] = machine
 			lock.Unlock()
+			machineId = machine.ID
 			break
 		}
 	}
 
-	filenameMap[fileName] = append(filenameMap[fileName],DataNodeIp)
-	fmt.Println("inside keeper Done :",fileName,filenameMap[fileName])
-	
+	filenameMap[fileName] = append(filenameMap[fileName], machineId)
+	fmt.Println("inside keeper Done :", fileName, filenameMap[fileName])
+
 	/*
-	if _, ok := filenameMap[fileName]; ok {
-		filenameMap[fileName] = append(filenameMap[fileName],DataNodeIp)
-		fmt.Println("inside keeper Done :",filenameMap[fileName])
-	} else {
-		filenameMap[fileName] = DataNodeIp
-	}
+		if _, ok := filenameMap[fileName]; ok {
+			filenameMap[fileName] = append(filenameMap[fileName],DataNodeIp)
+			fmt.Println("inside keeper Done :",filenameMap[fileName])
+		} else {
+			filenameMap[fileName] = DataNodeIp
+		}
 	*/
 	//updateFilenameMap()
 
@@ -228,7 +230,7 @@ func ConfirmClient(ip string, port int32) {
 		fmt.Println("Failed to connect to client with IP:", ip, ":", err)
 		return
 	}
-	fmt.Println("Conncted to Client %s",ip+":"+strconv.Itoa(int(port)))
+	fmt.Println("Conncted to Client %d", ip+":"+strconv.Itoa(int(port)))
 
 	defer conn.Close()
 	c := pb.NewDoneUpServiceClient(conn)
@@ -286,8 +288,8 @@ func (s *KeepersServer) Alive(ctx context.Context, req *pb.AliveRequest) (*pb.Al
 
 	return &pb.AliveResponse{}, nil
 }
-func removeElementByValue(arr []string, value string) []string {
-	var result []string
+func removeElementByValue(arr []int, value int) []int {
+	var result []int
 	for _, v := range arr {
 		if v != value {
 			result = append(result, v)
@@ -317,16 +319,14 @@ func AliveChecker(numKeepers int) {
 				machineMap[int(i)] = machine
 				lock.Unlock()
 
-				machineDeadIp := machineMap[i].IP
-				for key,_ := range filenameMap {
+				// machineDeadIp := machineMap[i].IP
+				for key, _ := range filenameMap {
 					for j := int(0); j < len(filenameMap[key]); j++ {
-						if machineDeadIp ==  filenameMap[key][j] {
-							filenameMap[key] = removeElementByValue(filenameMap[key],machineDeadIp)
+						if i == filenameMap[key][j] {
+							filenameMap[key] = removeElementByValue(filenameMap[key], i)
 							break
 						}
 					}
-
-					
 				}
 				//for debuging
 				// fmt.Println("aliveCount with id = ", i, " is out of service now")
@@ -402,21 +402,22 @@ func replicationFinishfunc(replicationMap map[string]map[string]bool) {
 				continue
 			}
 
-			if ips, ok := filenameMap[fileName]; ok {
+			fmt.Println("done = false for IP:", getIdFromIp(currentIp))
+			if ids, ok := filenameMap[fileName]; ok {
 				indexToRemove := -1
-				for i, ip := range ips {
-					if ip == currentIp {
+				for i, id := range ids {
+					if machineMap[id].IP == currentIp {
 						indexToRemove = i
 						break
 					}
 				}
 				if indexToRemove != -1 {
 					lockFilename.Lock()
-					filenameMap[fileName] = append(ips[:indexToRemove], ips[indexToRemove+1:]...)
+					filenameMap[fileName] = append(ids[:indexToRemove], ids[indexToRemove+1:]...)
 					lockFilename.Unlock()
 				}
 			}
-			removeFilenameFromMachine(currentIp, fileName)
+			removeFilenameFromMachine(getIdFromIp(currentIp), fileName)
 			fmt.Println("Machines:")
 			for id, machine := range machineMap {
 				fmt.Printf("ID: %d\n", id)
@@ -482,12 +483,18 @@ func replicationChecker() {
 		// fmt.Println("replicationChecker :", (*replicationMap), "with ticker_int%3 = ", ticker_int%3)
 		//fmt.Println("inside replicationChecker")
 
-		for filename, machineIps := range filenameMap {
+		for filename, machineIds := range filenameMap {
 			// fmt.Println("inside filenameMap loop")
 
-			fmt.Printf("%s: %v\n", filename, machineIps)
-			sourceMachineIp := machineIps[0]
-			machineIpsLen := len(machineIps)
+			fmt.Printf("%s: %v\n", filename, machineIds)
+			machineIpsLen := len(machineIds)
+			if machineIpsLen == 0 {
+				lockFilename.Lock()
+				delete(filenameMap, filename)
+				lockFilename.Unlock()
+				break
+			}
+			sourceMachineId := machineIds[0]
 			//fmt.Println("machineIpsLen = ", machineIpsLen)
 
 			for machineIpsLen < 2 {
@@ -500,11 +507,11 @@ func replicationChecker() {
 				if err != nil {
 					fmt.Println("Error: ", err)
 				} else {
-				
+					sourceMachineIp := machineMap[sourceMachineId].IP
 					notifyMachineDataTransfer(sourceMachineIp, destinationMachineIp, destMachinePort, filename)
 					machineIpsLen++
 					lockFilename.Lock()
-					filenameMap[filename] = append(filenameMap[filename], destinationMachineIp)
+					filenameMap[filename] = append(filenameMap[filename], destinationMachineId)
 					lockFilename.Unlock()
 					fmt.Println("filenameMap[filename]: ", filenameMap[filename])
 					//samaa:
@@ -524,7 +531,7 @@ func replicationChecker() {
 
 					IPReplicationMapNum[destinationMachineId] = ticker_int % 3 //NOTE 1,2,0 not 1,2,3
 					fmt.Println("tttttttttttttt")
-			}
+				}
 			}
 		}
 
@@ -532,12 +539,12 @@ func replicationChecker() {
 }
 
 func selectMachineToCopyTo(filename string) (string, int, int, error) {
-	machineIps := filenameMap[filename]
+	machineIds := filenameMap[filename]
 	for _, machine := range machineMap {
 		if machine.IsAlive {
 			found := false
-			for _, ip := range machineIps {
-				if ip == machine.IP {
+			for _, id := range machineIds {
+				if id == machine.ID {
 					found = true
 					break
 				}
@@ -554,7 +561,7 @@ func selectMachineToCopyTo(filename string) (string, int, int, error) {
 			}
 		}
 	}
-	return "", 0, 0, fmt.Errorf("failed to find machine")
+	return "", -1, -1, fmt.Errorf("failed to find machine")
 }
 
 func getIdFromIp(Ip string) int {
@@ -621,7 +628,7 @@ func updateFilenameMap() {
 				fmt.Println("filename = " + filename)
 				if !machineIps[machine.ID] {
 					lockFilename.Lock()
-					filenameMap[filename] = append(filenameMap[filename], machine.IP)
+					filenameMap[filename] = append(filenameMap[filename], machine.ID)
 					lockFilename.Unlock()
 					machineIps[machine.ID] = true
 				}
@@ -639,7 +646,7 @@ func updateFilenameMap() {
 /////////////////////////////// main ///////////////////////////////
 
 func main() {
-	filenameMap = make(map[string][]string)
+	filenameMap = make(map[string][]int)
 	config, err := loadConfig("config.json")
 	if err != nil {
 		fmt.Println("Error loading configuration:", err)

@@ -23,7 +23,7 @@ func (s *DoneUpServer) DoneUp(ctx context.Context, req *pb.DoneUpRequest) (*pb.D
 
 func main() {
 
-	var clientPort int32 = 8005
+	var clientPort int32 = 8012
 	var clientIp string = "localhost"
 	var masterPortToClient int32 = 8081
 	var masterIp string = "localhost"
